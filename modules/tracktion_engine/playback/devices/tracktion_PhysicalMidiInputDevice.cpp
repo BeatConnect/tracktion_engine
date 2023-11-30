@@ -469,10 +469,16 @@ void PhysicalMidiInputDevice::handleIncomingMidiMessageInt (const juce::MidiMess
 
             if (! tryToSendTimecode (message))
             {
+                // DBG("1 - " << (message.isNoteOn() ? "On" : "Off"));
+
                 if (isTakingControllerMessages)
                     controllerParser->processMessage (message);
 
                 sendMessageToInstances (message);
+            }
+            else
+            {
+                DBG("TOTO");
             }
         }
 

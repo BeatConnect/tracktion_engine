@@ -18,12 +18,20 @@ MidiInputDeviceNode::MidiInputDeviceNode (InputDeviceInstance& idi, MidiInputDev
       midiSourceID (msi),
       playHeadState (phs)
 {
+    // std::ostringstream oss;
+    // oss << "This Thread ID - " << std::this_thread::get_id() << ", This Address - " << this;
+    // DBG("MidiInputDeviceNode::MidiInputDeviceNode - " << oss.str());
+    
     for (int i = 256; --i >= 0;)
         incomingMessages.add (new juce::MidiMessage (0x80, 0, 0));
 }
 
 MidiInputDeviceNode::~MidiInputDeviceNode()
 {
+    //  std::ostringstream oss;
+    //  oss << "This Thread ID - " << std::this_thread::get_id() << ", This Address - " << this;
+    //  DBG("MidiInputDeviceNode::~MidiInputDeviceNode - " << oss.str());
+
     instance.removeConsumer (this);
 }
 
@@ -38,6 +46,8 @@ void MidiInputDeviceNode::prepareToPlay (const tracktion::graph::PlaybackInitial
 {
     sampleRate = info.sampleRate;
     lastPlayheadTime = 0.0;
+
+    //DBG("777");
     numMessages = 0;
     maxExpectedMsPerBuffer = (unsigned int) (((info.blockSize * 1000) / info.sampleRate) * 2 + 100);
 
@@ -91,6 +101,11 @@ void MidiInputDeviceNode::handleIncomingMidiMessage (const juce::MidiMessage& me
                 m.setChannel (channelToUse);
 
             ++numMessages;
+
+            DBG("--------------------------------------------------------------");
+            std::ostringstream oss;
+            oss << this;
+            DBG("222 - " << (message.isNoteOn() ? "On" : "Off") << ", numMessages = " << numMessages << ", " << oss.str());
         }
     }
 
@@ -138,6 +153,7 @@ void MidiInputDeviceNode::processSection (ProcessContext& pc, juce::Range<int64_
     if (timeNow > lastReadTime + maxExpectedMsPerBuffer)
     {
         //jassertfalse
+        //DBG("666");
         numMessages = 0;
     }
 
@@ -153,6 +169,20 @@ void MidiInputDeviceNode::processSection (ProcessContext& pc, juce::Range<int64_
         for (int i = 0; i < num; ++i)
         {
             auto m = incomingMessages.getUnchecked (i);
+
+            //  std::ostringstream oss;
+            //  oss << std::this_thread::get_id() << ", This Address - " << this;
+            //  DBG("111 - " << (m->isNoteOn() ? "On" : "Off") << ", Message # - " << numMessages << ", Thread ID - " << oss.str() << ", Reset numMessages");
+
+            //  juce::MidiMessage* temp = incomingMessages.getUnchecked(numMessages);
+            //  std::ostringstream oss;
+            //  oss << std::this_thread::get_id() << ", Message Address - " << temp;
+            //  DBG("111 - " << (m->isNoteOn() ? "On" : "Off") << ", Message # - " << numMessages << ", Thread ID - " << oss.str());
+
+            std::ostringstream oss;
+            oss << this;
+            DBG("111 - " << (m->isNoteOn() ? "On" : "Off") << ", numMessages = " << i << ", " << oss.str());
+
             destMidi.addMidiMessage (*m,
                                      juce::jlimit (0.0, juce::jmax (0.0, editTime.getLength()), m->getTimeStamp() - timeAdjust),
                                      midiSourceID);

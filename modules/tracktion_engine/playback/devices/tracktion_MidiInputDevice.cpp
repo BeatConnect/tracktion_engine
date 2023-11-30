@@ -632,6 +632,8 @@ public:
 
     juce::String prepareToRecord (TimePosition, TimePosition punchIn, double, int, bool) override
     {
+        // DBG("1");
+
         startTime = punchIn;
         recorded.clear();
         livePlayOver = context.transport.looping;
@@ -671,14 +673,24 @@ public:
     bool handleIncomingMidiMessage (const juce::MidiMessage& message)
     {               
         if (recording)
-        {   
+        {
+            // std::ostringstream oss;
+            // oss << ", Thread ID - " << std::this_thread::get_id() << ", This Address - " << this << ", Consumer Size - " << consumers.size();
+            // DBG("333 - " << (message.isNoteOn() ? "On" : "Off") << oss.str());
+
             recorded.addEvent (juce::MidiMessage (message, context.globalStreamTimeToEditTimeUnlooped (message.getTimeStamp()).inSeconds()));
         }
             
         juce::ScopedLock sl (consumerLock);
 
+        int i = 0;
         for (auto c : consumers)
-            c->handleIncomingMidiMessage (message);
+        {
+            if (i == 0 || i == consumers.size() - 1)
+                c->handleIncomingMidiMessage(message);
+
+            i++;
+        }
 
         return recording || consumers.size() > 0;
     }
@@ -732,6 +744,8 @@ public:
 
         Clip::Array createdClips;
         auto& mi = getMidiInput();
+
+        // DBG("3");
 
         recorded.updateMatchedPairs();
         auto channelToApply = mi.recordToNoteAutomation ? mi.getChannelToUse()

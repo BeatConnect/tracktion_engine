@@ -1306,6 +1306,8 @@ void ExternalPlugin::applyToBuffer (const PluginRenderContext& fc)
 
     if (pluginInstance != nullptr && (processedBypass || isEnabled()))
     {
+        // DBG("------------------------------------------------");
+
         CRASH_TRACER_PLUGIN (getDebugName());
         const juce::ScopedLock sl (lock);
         jassert (isInstancePrepared);
@@ -1315,11 +1317,16 @@ void ExternalPlugin::applyToBuffer (const PluginRenderContext& fc)
 
         midiBuffer.clear();
 
+        //  if(fc.bufferForMidiMessages->size() > 0)
+        //      DBG("0 - Is All Notes Off - " << (fc.bufferForMidiMessages->isAllNotesOff ? "Yes" : "No") << ", Size - " << fc.bufferForMidiMessages->size());
+
         if (fc.bufferForMidiMessages != nullptr)
             prepareIncomingMidiMessages (*fc.bufferForMidiMessages, fc.bufferNumSamples, fc.isPlaying);
 
         if (fc.destBuffer != nullptr)
-        {
+        {   
+            // DBG("1 - Is All Notes Off - " << (fc.bufferForMidiMessages->isAllNotesOff ? "Yes" : "No") << ", Size - " << fc.bufferForMidiMessages->size());
+
             auto destNumChans = fc.destBuffer->getNumChannels();
             jassert (destNumChans > 0);
 
@@ -1329,10 +1336,14 @@ void ExternalPlugin::applyToBuffer (const PluginRenderContext& fc)
 
             if (destNumChans == numChansToProcess)
             {
+                // DBG("2 - Is All Notes Off - " << (fc.bufferForMidiMessages->isAllNotesOff ? "Yes" : "No") << ", Size - " << fc.bufferForMidiMessages->size());
+
                 processPluginBlock (fc, processedBypass);
             }
             else
             {
+                DBG("3"); // NOT HERE.
+
                 AudioScratchBuffer asb (numChansToProcess, fc.bufferNumSamples);
                 auto& buffer = asb.buffer;
 
@@ -1377,6 +1388,8 @@ void ExternalPlugin::applyToBuffer (const PluginRenderContext& fc)
         }
         else
         {
+            DBG("4"); // NOT HERE.
+
             AudioScratchBuffer asb (std::max (pluginInstance->getTotalNumInputChannels(),
                                               pluginInstance->getTotalNumOutputChannels()), fc.bufferNumSamples);
 
@@ -1388,10 +1401,14 @@ void ExternalPlugin::applyToBuffer (const PluginRenderContext& fc)
 
         if (fc.bufferForMidiMessages != nullptr)
         {
+            // DBG("5 - Is All Notes Off - " << (fc.bufferForMidiMessages->isAllNotesOff ? "Yes" : "No") << ", Size - " << fc.bufferForMidiMessages->size());
+
             fc.bufferForMidiMessages->clear();
 
             if (! midiBuffer.isEmpty())
             {
+                DBG("6"); // NOT HERE.
+
                 for (auto itr : midiBuffer)
                 {
                     const auto& msg = itr.getMessage();
