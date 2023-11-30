@@ -139,6 +139,10 @@ void MidiInputDeviceNode::handleIncomingMidiMessage (const juce::MidiMessage& me
 
 void MidiInputDeviceNode::processSection (ProcessContext& pc, juce::Range<int64_t> timelineRange)
 {
+    // Try MidiMessageArray::isAllNotesOff
+    // 
+    // https://forum.juce.com/t/midi-note-hangs-forever-when-switching-to-new-track-while-current-track-is-recieving-midi-input/41295/3
+
     const auto editTime = tracktion::graph::sampleToTime (timelineRange, sampleRate);
     const auto timeNow = juce::Time::getApproximateMillisecondCounter();
     auto& destMidi = pc.buffers.midi;
