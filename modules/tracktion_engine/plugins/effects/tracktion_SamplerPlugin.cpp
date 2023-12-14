@@ -8,8 +8,6 @@
     Tracktion Engine uses a GPL/commercial licence - see LICENCE.md for details.
 */
 
-#include "../Source/Data/Repo.h"
-
 namespace tracktion { inline namespace engine
 {
 
@@ -155,7 +153,8 @@ public:
     // BEAT CONNECT MODIFICATION START
     void setCoefficients(const FilterType filter, const double frequency, const double gainFactor = 0)
     {
-        const double engineSampleRate = Repo::getInstance().getEdit()->engine.getDeviceManager().getSampleRate();
+        auto& engine = *tracktion::engine::Engine::getEngines()[0];
+        const double engineSampleRate = engine.getDeviceManager().getSampleRate();
         switch (filter) {
             case FilterType::noFilter: {
                 return;
