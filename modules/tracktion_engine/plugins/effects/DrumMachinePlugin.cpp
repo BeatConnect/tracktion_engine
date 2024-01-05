@@ -9,7 +9,30 @@
 
 namespace tracktion { inline namespace engine
 {
-DrumMachinePlugin::DrumMachinePlugin(PluginCreationInfo pluginCreationInfo) : SamplerPlugin(pluginCreationInfo) {}
+DrumMachinePlugin::DrumMachinePlugin(PluginCreationInfo pluginCreationInfo) : SamplerPlugin(pluginCreationInfo) 
+{
+    // Effects: Distortion
+    distortionOnValue.referTo(state, IDs::distortionOn, nullptr);
+    distortionValue.referTo(state, IDs::distortion, nullptr, 0.5f);
+
+    distortion = addParam("distortion", TRANS("Distortion"), { 0.0f, 1.0f });
+
+    distortion->attachToCurrentValue(distortionValue);
+
+    if (!state.hasProperty(IDs::distortionOn))
+        state.setProperty(IDs::distortionOn, "0", nullptr);
+}
+
+DrumMachinePlugin::~DrumMachinePlugin() 
+{
+    // Effects: Distortion
+    distortion->detachFromCurrentValue();
+}
+
+void DrumMachinePlugin::applyToBuffer(const PluginRenderContext& pluginRenderContext)
+{
+    SamplerPlugin::applyToBuffer(pluginRenderContext);
+}
 
 const int DrumMachinePlugin::pitchWheelSemitoneRange = 25;
 const char* DrumMachinePlugin::uniqueId = "adf30650-4fd8-4cce-933d-fa8aa598c6c9";

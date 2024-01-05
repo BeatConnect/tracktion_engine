@@ -12,10 +12,11 @@
 namespace tracktion { inline namespace engine
 {
 // A Drum Machine is a specialised Sampler.
-// Whenever general sampler operations are required please deffer to the base class SamplerPlugin
+// Whenever general sampler operations are required please defer to the base class SamplerPlugin
 struct DrumMachinePlugin : public SamplerPlugin {
 public:
 	DrumMachinePlugin(PluginCreationInfo pluginCreationInfo);
+	~DrumMachinePlugin();
 
 	static const int pitchWheelSemitoneRange;
 	static const char* uniqueId;
@@ -29,6 +30,12 @@ public:
 	juce::String getSelectableDescription() override { return TRANS("Drum Machine"); }
 	juce::String getUniqueId() override { return uniqueId; }
 	virtual juce::String getVendor() override { return "BeatConnect"; }
+
+	juce::CachedValue<bool> distortionOnValue;
+	juce::CachedValue<float> distortionValue;
+	AutomatableParameter::Ptr distortion;
+private:
+	void applyToBuffer(const PluginRenderContext& pluginRenderContext);
 };
 
 }} // namespace tracktion { inline namespace engine
