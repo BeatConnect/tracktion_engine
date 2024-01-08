@@ -12,26 +12,59 @@ namespace tracktion { inline namespace engine
 DrumMachinePlugin::DrumMachinePlugin(PluginCreationInfo pluginCreationInfo) : SamplerPlugin(pluginCreationInfo) 
 {
     // Effects: Distortion
-    distortionOnValue.referTo(state, IDs::distortionOn, nullptr);
-    distortionValue.referTo(state, IDs::distortion, nullptr, 0.5f);
+    for (int i = 0; i < drumMachineTracks; i++)
+        distortionOnValues[i] = false;
 
-    distortion = addParam("distortion", TRANS("Distortion"), { 0.0f, 1.0f });
-
-    distortion->attachToCurrentValue(distortionValue);
-
-    if (!state.hasProperty(IDs::distortionOn))
-        state.setProperty(IDs::distortionOn, "0", nullptr);
+    for (int i = 0; i < drumMachineTracks; i++)
+        distortionValues[i] = 0;
 }
 
 DrumMachinePlugin::~DrumMachinePlugin() 
 {
     // Effects: Distortion
-    distortion->detachFromCurrentValue();
+    for (auto element : distortionPointers)
+        if (element)
+            element->detachFromCurrentValue();
+}
+
+void DrumMachinePlugin::applyEffects(juce::AudioBuffer<float>& buffer, const int channelIndex)
+{
+    int numSamples = buffer.getNumSamples();
+
+    // Apply Distortion
+    if (distortionOnValues[channelIndex])
+    {
+        float drive = paramValue(distortionPointers[channelIndex]);
+        float clip = 1.0f / (2.0f * drive);
+        Distortion::distortion(buffer.getWritePointer(0), numSamples, drive, -clip, clip);
+        Distortion::distortion(buffer.getWritePointer(1), numSamples, drive, -clip, clip);
+    }
 }
 
 void DrumMachinePlugin::applyToBuffer(const PluginRenderContext& pluginRenderContext)
 {
     SamplerPlugin::applyToBuffer(pluginRenderContext);
+    // Get the buffers for each SamplerSound to apply the effects.
+}
+
+float DrumMachinePlugin::paramValue(AutomatableParameter::Ptr param)
+{
+    jassert(param != nullptr);
+    if (param == nullptr)
+    {
+        return 0.0f;
+    } else {
+        return param->getCurrentValue(); // =8> Temporary debug code.
+    }
+
+    // Do the smoothers! =8>
+    //auto smoothItr = smoothers.find(param.get());
+    //if (smoothItr == smoothers.end())
+    //    return param->getCurrentValue();
+
+    //float val = param->getCurrentNormalisedValue();
+    //smoothItr->second.setValue(val);
+    //return param->valueRange.convertFrom0to1(smoothItr->second.getCurrentValue());
 }
 
 const int DrumMachinePlugin::pitchWheelSemitoneRange = 25;

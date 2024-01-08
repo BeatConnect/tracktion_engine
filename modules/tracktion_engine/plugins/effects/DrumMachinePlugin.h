@@ -9,6 +9,8 @@
 
 #pragma once
 
+#include <vector>
+
 namespace tracktion { inline namespace engine
 {
 // A Drum Machine is a specialised Sampler.
@@ -31,11 +33,16 @@ public:
 	juce::String getUniqueId() override { return uniqueId; }
 	virtual juce::String getVendor() override { return "BeatConnect"; }
 
-	juce::CachedValue<bool> distortionOnValue;
-	juce::CachedValue<float> distortionValue;
-	AutomatableParameter::Ptr distortion;
+	static const int drumMachineTracks = 16;
+	juce::CachedValue<bool> distortionOnValues[drumMachineTracks];
+	juce::CachedValue<float> distortionValues[drumMachineTracks];
+	AutomatableParameter::Ptr distortionPointers[drumMachineTracks];
 private:
+	std::unordered_map<AutomatableParameter*, ValueSmoother<float>> smoothers;
+
+	void applyEffects(juce::AudioBuffer<float>& buffer, const int channelIndex);
 	void applyToBuffer(const PluginRenderContext& pluginRenderContext);
+	float paramValue(AutomatableParameter::Ptr param);
 };
 
 }} // namespace tracktion { inline namespace engine

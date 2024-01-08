@@ -490,6 +490,7 @@ void SamplerPlugin::applyToBuffer (const PluginRenderContext& fc)
             auto sn = playingNotes.getUnchecked (i);
             sn->addNextBlock (*fc.destBuffer, fc.bufferStartSample, fc.bufferNumSamples);
 
+            // =8> Here is where effects would be applied
             if (sn->isFinished)
                 playingNotes.remove (i);
         }
