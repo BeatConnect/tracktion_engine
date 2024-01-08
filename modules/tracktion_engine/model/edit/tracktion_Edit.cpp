@@ -561,7 +561,10 @@ Edit::Edit (Options options)
 
     undoManager.setMaxNumberOfStoredUnits (1000 * options.numUndoLevelsToStore, options.numUndoLevelsToStore);
 
-    initialise();
+    // BEATCONNECT MODIFICATION START
+    // initialise();
+    initialise(options.createDefaultTrack);
+    // BEATCONNECT MODIFICATION END
 
     undoTransactionTimer = std::make_unique<UndoTransactionTimer> (*this);
 
@@ -683,7 +686,10 @@ Edit::ScopedRenderStatus::~ScopedRenderStatus()
 
 
 //==============================================================================
-void Edit::initialise()
+// BEATCONNECT MODIFICATION START
+// void Edit::initialise()
+void Edit::initialise(bool createDefaultTrack)
+// BEATCONNECT MODIFICATION END
 {
     CRASH_TRACER
     const StopwatchTimer loadTimer;
@@ -719,7 +725,11 @@ void Edit::initialise()
     if (loadContext != nullptr)
         loadContext->progress = 1.0f;
 
-    initialiseTracks();
+    // BEATCONNECT MODIFICATION START
+    // initialiseTracks();
+    initialiseTracks(createDefaultTrack);
+    // BEATCONNECT MODIFICATION END
+
     initialiseARA();
     updateMuteSoloStatuses();
     readFrozenTracksFiles();
@@ -828,7 +838,9 @@ void Edit::initialiseMasterVolume()
     if (! masterVolState.isValid())
     {
         masterVolState = VolumeAndPanPlugin::create();
-        masterVolState.setProperty (IDs::volume, decibelsToVolumeFaderPosition (-3.0f), nullptr);
+        // BEATCONNECT MODIFICATION START
+        masterVolState.setProperty(IDs::volume, decibelsToVolumeFaderPosition(-4.0f), nullptr);
+        // BEATCONNECT MODIFICATION END
         mvTree.addChild (masterVolState, -1, nullptr);
     }
 
@@ -901,10 +913,16 @@ void Edit::removeZeroLengthClips()
         c->removeFromParentTrack();
 }
 
-void Edit::initialiseTracks()
+// BEATCONNECT MODIFICATION START
+// void Edit::initialiseTracks()
+void Edit::initialiseTracks(bool createDefaultTrack)
+// BEATCONNECT MODIFICATION END
 {
     // If the tempo track hasn't been created yet this is a new Edit
-    if (getTempoTrack() == nullptr)
+    // BEATCONNECT MODIFICATION START
+    // if (getTempoTrack() == nullptr)
+    if (getTempoTrack() == nullptr && createDefaultTrack)
+    // BEATCONNECT MODIFICATION END
     {
         ensureNumberOfAudioTracks (getProjectItemID().getProjectID() == 0 ? 1 : 8);
         updateTrackStatuses();
@@ -1696,6 +1714,26 @@ Track::Ptr Edit::insertTrack (juce::ValueTree v, juce::ValueTree parent,
 
     return newTrack;
 }
+
+// BEATCONNECT MODIFICATION START
+AudioTrack::Ptr Edit::insertNewAudioTrackWithType(TrackInsertPoint insertPoint, SelectionManager* sm, juce::String type)
+{
+    if (auto newTrack = insertNewTrackWithType(insertPoint, IDs::TRACK, sm, type))
+    {
+        newTrack->pluginList.addDefaultTrackPlugins(false);
+        return dynamic_cast<AudioTrack*> (newTrack.get());
+    }
+
+    return {};
+}
+
+Track::Ptr Edit::insertNewTrackWithType(TrackInsertPoint insertPoint, const juce::Identifier& xmlType, SelectionManager* sm, juce::String type)
+{
+    auto v = juce::ValueTree(xmlType);
+    v.setProperty(IDs::type, type, nullptr);
+    return insertTrack(insertPoint, v, sm);
+}
+// BEATCONNECT MODIFICATION END
 
 AudioTrack::Ptr Edit::insertNewAudioTrack (TrackInsertPoint insertPoint, SelectionManager* sm)
 {

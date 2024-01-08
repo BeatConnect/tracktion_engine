@@ -99,6 +99,10 @@ public:
 
         std::function<juce::File()> editFileRetriever = {};                     /**< An optional editFileRetriever to use. */
         std::function<juce::File (const juce::String&)> filePathResolver = {};  /**< An optional filePathResolver to use. */
+
+        // BEATCONNECT MODIFICATION START
+        bool createDefaultTrack = true;
+        // BEATCONNECT MODIFICATION END
     };
 
     /** Creates an Edit from a set of Options. */
@@ -349,6 +353,10 @@ public:
     //==============================================================================
     /** Inserts a new AudioTrack in the Edit. */
     juce::ReferenceCountedObjectPtr<AudioTrack> insertNewAudioTrack (TrackInsertPoint, SelectionManager*);
+    // BEATCONNECT MODIFICATION START
+    juce::ReferenceCountedObjectPtr<AudioTrack> insertNewAudioTrackWithType (TrackInsertPoint, SelectionManager*, juce::String type);
+    Track::Ptr Edit::insertNewTrackWithType(TrackInsertPoint insertPoint, const juce::Identifier& xmlType, SelectionManager* sm, juce::String type);
+    // BEATCONNECT MODIFICATION END
 
     /** Inserts a new FolderTrack in the Edit, optionally as a submix. */
     juce::ReferenceCountedObjectPtr<FolderTrack> insertNewFolderTrack (TrackInsertPoint, SelectionManager*, bool asSubmix);
@@ -887,7 +895,12 @@ private:
     void moveTrackInternal (Track::Ptr, TrackInsertPoint);
 
     //==============================================================================
-    void initialise();
+
+    // BEATCONNECT MODIFICATION START
+    // void initialise();
+    void initialise(bool createDefaultTrack = true);
+    // BEATCONNECT MODIFICATION END
+
     void undoOrRedo (bool isUndo);
 
     //==============================================================================
@@ -897,7 +910,12 @@ private:
     void initialiseMasterVolume();
     void initialiseVideo();
     void initialiseClickTrack();
-    void initialiseTracks();
+
+    // BEATCONNECT MODIFICATION START
+    // void initialiseTracks();
+    void initialiseTracks(bool createDefaultTrack = true);
+    // BEATCONNECT MODIFICATION END
+
     void initialiseAudioDevices();
     void initialiseRacks();
     void initialiseAuxBusses();
