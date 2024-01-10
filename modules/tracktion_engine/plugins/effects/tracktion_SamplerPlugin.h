@@ -153,6 +153,10 @@ private:
     juce::OwnedArray<SamplerSound> soundList;
     juce::BigInteger highlightedNotes;
 
+    // BEATCONNECT MODIFICATION START
+    EffectsModule effectsModule;
+    // BEATCONNECT MODIFICATION END
+
     juce::ValueTree getSound (int index) const;
 
     void valueTreeChanged() override;

@@ -275,6 +275,7 @@ namespace tracktion { inline namespace engine
 {
     // BEATCONNECT MODIFICATION START
     class AudioFifo;
+    class EffectsModule;
     // BEATCONNECT MODIFICATION END
 
     class EngineBehaviour;
@@ -630,6 +631,9 @@ namespace tracktion { inline namespace engine
 #include "plugins/effects/tracktion_Phaser.h"
 #include "plugins/effects/tracktion_PitchShift.h"
 #include "plugins/effects/tracktion_Reverb.h"
+// BEATCONNECT MODIFICATION START
+#include "../Source/Plugin/EffectsModule/EffectsModule.h" // Must be included before SamplerPlugin as it composes EffectsModule.
+// BEATCONNECT MODIFICATION END
 #include "plugins/effects/tracktion_SamplerPlugin.h"
 #include "plugins/effects/tracktion_ToneGenerator.h"
 // BEATCONNECT MODIFICATION START
