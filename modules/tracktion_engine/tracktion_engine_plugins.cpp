@@ -80,6 +80,7 @@ using namespace std::literals;
 #include "plugins/effects/tracktion_Phaser.cpp"
 #include "plugins/effects/tracktion_PitchShift.cpp"
 #include "plugins/effects/tracktion_Reverb.cpp"
+#include "../Source/Plugin/EffectsModule/EffectsModule.cpp" // =8> I'm not sure that this is right
 #include "plugins/effects/tracktion_SamplerPlugin.cpp"
 #include "plugins/effects/tracktion_ToneGenerator.cpp"
 // BEATCONNECT MODIFICATION START
