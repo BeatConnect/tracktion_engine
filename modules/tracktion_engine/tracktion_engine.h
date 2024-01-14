@@ -275,7 +275,8 @@ namespace tracktion { inline namespace engine
 {
     // BEATCONNECT MODIFICATION START
     class AudioFifo;
-    class EffectsModule;
+    //class EffectsModuleChorus; // =8> I'm not sure this forward declaration is required
+    //class EffectsModule; // =8> I'm not sure this forward declaration is required
     // BEATCONNECT MODIFICATION END
 
     class EngineBehaviour;
