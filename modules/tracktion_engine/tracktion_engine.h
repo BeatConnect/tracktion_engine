@@ -631,7 +631,7 @@ namespace tracktion { inline namespace engine
 #include "plugins/effects/tracktion_PitchShift.h"
 #include "plugins/effects/tracktion_Reverb.h"
 //
-#include "../Source/Plugin/bc_EffectsModule.h" // Must be included before SamplerPlugin as it composes EffectsModule.
+#include "../Source/Plugin/OLD_bc_EffectsModule.h" // Must be included before SamplerPlugin as it composes EffectsModule.
 //
 #include "plugins/effects/tracktion_SamplerPlugin.h"
 #include "plugins/effects/tracktion_ToneGenerator.h"
