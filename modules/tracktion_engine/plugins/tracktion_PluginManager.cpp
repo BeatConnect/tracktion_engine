@@ -8,6 +8,9 @@
     Tracktion Engine uses a GPL/commercial licence - see LICENCE.md for details.
 */
 
+#include "../Source/Plugin/SamplerPlugin/bc_SamplerPlugin.h"
+#include "../Source/Plugin/DrumMachine/bc_DrumMachinePlugin.h"
+
 namespace tracktion { inline namespace engine
 {
 
@@ -418,9 +421,11 @@ void PluginManager::initialise()
     createBuiltInType<PhaserPlugin>();
     createBuiltInType<PitchShiftPlugin>();
     createBuiltInType<LowPassPlugin>();
+    createBuiltInType<BeatConnect::SamplerPlugin>();
     createBuiltInType<SamplerPlugin>();
     // BEATCONNECT MODIFICATION START
     createBuiltInType<DrumMachinePlugin>();
+    createBuiltInType<BeatConnect::DrumMachinePlugin>();
     // BEATCONNECT MODIFICATION END
     createBuiltInType<FourOscPlugin>();
     createBuiltInType<MidiModifierPlugin>();
