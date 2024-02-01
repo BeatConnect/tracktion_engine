@@ -630,13 +630,10 @@ namespace tracktion { inline namespace engine
 #include "plugins/effects/tracktion_Phaser.h"
 #include "plugins/effects/tracktion_PitchShift.h"
 #include "plugins/effects/tracktion_Reverb.h"
-//
-#include "../Source/Plugin/OLD_bc_EffectsModule.h" // Must be included before SamplerPlugin as it composes EffectsModule.
-//
 #include "plugins/effects/tracktion_SamplerPlugin.h"
 #include "plugins/effects/tracktion_ToneGenerator.h"
 // BEATCONNECT MODIFICATION START
-#include "plugins/effects/DrumMachinePlugin.h" // =8> Should probably be able to pull this line eventually
+#include "plugins/effects/DrumMachinePlugin.h"
 #include "midi/bc_Midi.h"
 // BEATCONNECT MODIFICATION END
 
