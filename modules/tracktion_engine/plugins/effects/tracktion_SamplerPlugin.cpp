@@ -157,6 +157,7 @@ namespace tracktion {
         }
 
         const char* SamplerPlugin::xmlTypeName = "sampler";
+        const char* SamplerPlugin::uniqueId = "2dfa0d4a-fa7f-4785-b7c2-35bffc65ecd0";
 
         void SamplerPlugin::valueTreeChanged()
         {

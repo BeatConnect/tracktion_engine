@@ -50,12 +50,13 @@ namespace tracktion {
             //==============================================================================
             static const char* getPluginName() { return NEEDS_TRANS("Sampler"); }
             static const char* xmlTypeName;
+            static const char* uniqueId;
 
             juce::String getName() override { return TRANS("Sampler"); }
             juce::String getPluginType() override { return xmlTypeName; }
             juce::String getShortName(int) override { return "Smplr"; }
             juce::String getSelectableDescription() override { return TRANS("Sampler"); }
-            juce::String getUniqueId() override { return "test"; } // =8>
+            juce::String getUniqueId() override { return uniqueId; }
             bool isSynth() override { return true; }
             bool needsConstantBufferSize() override { return false; }
 
