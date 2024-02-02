@@ -421,10 +421,9 @@ void PluginManager::initialise()
     createBuiltInType<PhaserPlugin>();
     createBuiltInType<PitchShiftPlugin>();
     createBuiltInType<LowPassPlugin>();
-    createBuiltInType<BeatConnect::SamplerPlugin>();
     createBuiltInType<SamplerPlugin>();
     // BEATCONNECT MODIFICATION START
-    createBuiltInType<DrumMachinePlugin>();
+    createBuiltInType<BeatConnect::SamplerPlugin>();
     createBuiltInType<BeatConnect::DrumMachinePlugin>();
     // BEATCONNECT MODIFICATION END
     createBuiltInType<FourOscPlugin>();
