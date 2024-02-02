@@ -632,9 +632,6 @@ namespace tracktion { inline namespace engine
 #include "plugins/effects/tracktion_Reverb.h"
 #include "plugins/effects/tracktion_SamplerPlugin.h"
 #include "plugins/effects/tracktion_ToneGenerator.h"
-// BEATCONNECT MODIFICATION START
-#include "midi/bc_Midi.h"
-// BEATCONNECT MODIFICATION END
 
 #include "plugins/ARA/tracktion_MelodyneFileReader.h"
 
