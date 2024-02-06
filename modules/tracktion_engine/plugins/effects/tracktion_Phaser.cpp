@@ -17,7 +17,7 @@ PhaserPlugin::PhaserPlugin (PluginCreationInfo info)  : Plugin (info)
 
     // BEATCONNECT MODIFICATION START
     // This appears missing for some reason?
-    depthParam = addParam("depth", TRANS("Depth"), { 0, 20.0f });
+    depthParam = addParam("depth", TRANS("Depth"), { 0.0f, 20.0f });
     rateParam = addParam("rate", TRANS("Rate"), { 0.1f, 20.0f });
     feedbackGainParam = addParam("feedback", TRANS("Feedback"), { 0.0f, 0.7f });
     // BEATCONNECT MODIFICATION END
@@ -65,10 +65,10 @@ void PhaserPlugin::deinitialise()
 
 void PhaserPlugin::applyToBuffer (const PluginRenderContext& fc)
 {
-    if (fc.destBuffer == nullptr)
+     if (fc.destBuffer == nullptr)
         return;
 
-    SCOPED_REALTIME_CHECK
+    SCOPED_REALTIME_CHECK 
 
     const double range = pow (2.0, (double) depth);
     const double sweepUp = pow (range, rate / (sampleRate / 2));
@@ -85,8 +85,9 @@ void PhaserPlugin::applyToBuffer (const PluginRenderContext& fc)
     for (int chan = std::min (2, fc.destBuffer->getNumChannels()); --chan >= 0;)
     {
         float* b = fc.destBuffer->getWritePointer (chan, fc.bufferStartSample);
-        swp = sweep;
+        swp = sweep; 
         swpFactor = sweepFactor;
+        //swpFactor = sweepFactor; // =8
 
         for (int i = fc.bufferNumSamples; --i >= 0;)
         {
@@ -121,8 +122,14 @@ void PhaserPlugin::applyToBuffer (const PluginRenderContext& fc)
 
             swp *= swpFactor;
 
-            if (swp > maxSweep)       swpFactor = sweepDown;
-            else if (swp < minSweep)  swpFactor = sweepUp;
+            if (swp > maxSweep)
+            {
+                swpFactor = sweepDown;
+            }
+            else if (swp < minSweep) 
+            {
+                swpFactor = sweepUp;
+            }
         }
     }
 
