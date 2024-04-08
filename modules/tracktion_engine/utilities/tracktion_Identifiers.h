@@ -672,6 +672,7 @@ namespace IDs
     DECLARE_ID(keyNoteOffsets)
     DECLARE_ID(tremolo)
     DECLARE_ID(tremolos)
+    DECLARE_ID(PitchWheelKeyNote)
 
     // Drum Machine IDs
     DECLARE_ID(Cymbal)
