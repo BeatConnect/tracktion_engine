@@ -52,6 +52,9 @@ struct StepClip::ChannelList  : public ValueTreeObjectList<StepClip::Channel>
 StepClip::StepClip (const juce::ValueTree& v, EditItemID id, ClipTrack& targetTrack)
     : Clip (v, targetTrack, id, Type::step)
 {
+    std::string debugValueTree = v.toXmlString().toStdString(); // =8>
+    int breakpoint = 8888; // =8>
+
     auto um = getUndoManager();
     channelList.reset (new ChannelList (*this, state.getOrCreateChildWithName (IDs::CHANNELS, um)));
     repeatSequence.referTo (state, IDs::repeatSequence, um);
@@ -410,7 +413,8 @@ void StepClip::generateMidiSequenceForChannels (juce::MidiMessageSequence& resul
                         // BEATCONNECT MODIFICATION START
                         const int pitchWheelSemitoneRange = 25;
                         const int pitchWheelPosition = juce::MidiMessage::pitchbendToPitchwheelPos(cache->getKeyNoteOffset(i), pitchWheelSemitoneRange);
-                        result.addEvent(juce::MidiMessage::textMetaEvent(chan, IDs::PitchWheelKeyNote + juce::String(note) + IDs::PitchWheelPosition + juce::String(pitchWheelPosition)), eventStart);
+                        result.addEvent(juce::MidiMessage::textMetaEvent(chan, IDs::PitchWheelKeyNote + juce::String(note) + IDs::PitchWheelPosition +
+                            juce::String(pitchWheelPosition)), eventStart);
                         // BEATCONNECT MODIFICATION END
 
                         result.addEvent (juce::MidiMessage::noteOn (chan, note, vel * channelVelScale), eventStart);

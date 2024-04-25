@@ -690,6 +690,38 @@ std::unique_ptr<tracktion::graph::Node> createNodeForStepClip (StepClip& clip, c
         sequences.push_back (sequence);
     }
 
+    // =8> DEBUG
+    std::string debugSequences = "";
+    int i = 1;
+    bool textMetaEventFound = false;
+    for (auto sequence : sequences)
+    { 
+        debugSequences += "Sequence " + i++ + '\n';
+        for (auto message : sequence)
+        {
+            debugSequences += message->message.getDescription().toStdString();
+            if (message->message.isTextMetaEvent())
+            {
+                debugSequences += " " + message->message.getTextFromTextMetaEvent().toStdString();
+                textMetaEventFound = true;
+            }
+            debugSequences += '\n';
+        }
+    }
+
+    if (!textMetaEventFound)
+    {
+        int breakpoint = 8888;
+    }
+
+
+    if (debugSequences != "")
+    {
+        int breakpoint = 8888;
+    }
+
+    // =8> DEBUG
+
     const auto clipRange = clip.getEditTimeRange();
     const juce::Range<double> editTimeRange (clipRange.getStart().inSeconds(), clipRange.getEnd().inSeconds());
     node = graph::makeNode<MidiNode> (
@@ -711,6 +743,31 @@ std::unique_ptr<tracktion::graph::Node> createNodeForStepClip (StepClip& clip, c
 
                                           return false;
                                       });
+
+
+    std::string midiMessagesOnNode = "";
+
+    auto testNode = dynamic_cast<MidiNode*>(node.get());
+
+    for (auto sequence : testNode->ms)
+    {
+        for (auto element : sequence)
+        {
+            midiMessagesOnNode += element->message.getDescription().toStdString();
+            
+            if (element->message.isTextMetaEvent())
+            {
+                midiMessagesOnNode += " " + element->message.getTextFromTextMetaEvent().toStdString();
+            }
+
+            midiMessagesOnNode += '\n';
+        }
+    }
+
+    if (midiMessagesOnNode != "")
+    {
+        int breakpoint = 8888;
+    }
 
     if (node && ! clip.getListeners().isEmpty())
         node = makeNode<LiveMidiOutputNode> (clip, std::move (node));
@@ -1656,6 +1713,35 @@ std::unique_ptr<tracktion::graph::Node> createNodeForEdit (EditPlaybackContext& 
     finalNode = makeNode<LevelMeasuringNode> (std::move (finalNode), epc.masterLevels);
     finalNode = createRackNode (std::move (finalNode), edit.getRackList(), params);
     finalNode = makeNode<PlayHeadPositionNode> (params.processState, std::move (finalNode), audibleTimeToUpdate);
+
+    // =8> DEBUG
+    std::string debugMididMessages = "";
+    for (auto midiElement : finalNode->midiBuffer)
+    {
+        std::string midiDescription = midiElement.getDescription().toStdString();
+        int breakpoint = 8888;
+    }
+        //auto testNode = dynamic_cast<MidiNode*>(finalNode.get()); // =8> DEBUG
+
+        //for (auto sequence : testNode->ms)
+        //{
+        //    for (auto message : sequence)
+        //    {
+        //        debugMididMessages += message->message.getDescription().toStdString();
+
+        //        if (message->message.isTextMetaEvent())
+        //        {
+        //            debugMididMessages += " " + message->message.getTextFromTextMetaEvent().toStdString();
+        //        }
+
+        //        debugMididMessages += '\n';
+        //    }
+        //}
+
+    //if (debugMididMessages != "")
+    //{
+    //    int breakpoint = 8888;
+    //}
     
     return finalNode;
 }

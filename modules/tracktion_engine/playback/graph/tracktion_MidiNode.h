@@ -39,6 +39,7 @@ public:
 
 private:
     //==============================================================================
+public: // =8> DEBUG
     std::vector<juce::MidiMessageSequence> ms;
     const MidiList::TimeBase timeBase;
     int64_t lastStart = 0;

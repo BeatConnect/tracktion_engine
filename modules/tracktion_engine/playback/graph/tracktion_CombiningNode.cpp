@@ -87,15 +87,79 @@ struct CombiningNode::TimedNode
     void process (ProcessContext& pc)
     {
         jassert (hasPrefetched);
+
+        const int bufferSizeBeforeProcess = pc.buffers.midi.size();
+
+        // PC is Empty
+        // DEBUG NONSENSE =8>
+        {
+        //std::string midiBuffersBefore = "";
+
+        //for (auto &element : pc.buffers.midi)
+        //{
+        //    midiBuffersBefore += element.getDescription().toStdString();
+        //}
+
+        //if (midiBuffersBefore != "")
+        //{
+        //    int breakpoint = 8888;
+        //}
+        }
         
         // Process all the Nodes
         for (auto n : nodesToProcess)
             n->process (pc.numSamples, pc.referenceSampleRange);
+
+        const int bufferSizeAfterProcess = pc.buffers.midi.size();
+
+        // PC is still Empty
+        // DEBUG NONSENSE =8>
+        {
+        std::string midiBuffersAfter = "";
+
+        for (auto& element : pc.buffers.midi)
+        {
+            midiBuffersAfter += element.getDescription().toStdString();
+        }
+
+        if (midiBuffersAfter != "")
+        {
+            int breakpoint = 8888;
+        }
+        }
         
         // Then get the output from the source Node
         auto nodeOutput = node->getProcessedOutput();
         const auto numDestChannels = pc.buffers.audio.getNumChannels();
         const auto numChannelsToAdd = std::min (nodeOutput.audio.getNumChannels(), numDestChannels);
+
+        // What's nodeOutput's story?
+        std::string nodeOutputMessages = "";
+        bool nodeOutputNoteOn = false;
+        bool nodeOutputTextMeta = false;
+
+        for (auto message : nodeOutput.midi)
+        {
+    		nodeOutputMessages += message.getDescription().toStdString();
+            if (message.isNoteOn())
+			{
+				nodeOutputNoteOn = true;
+			}
+			else if (message.isTextMetaEvent())
+			{
+				nodeOutputTextMeta = true;
+			}
+        }
+
+        if (nodeOutputMessages != "")
+		{
+			int breakpoint = 8888;
+		}
+
+        if (nodeOutputNoteOn && !nodeOutputTextMeta)
+        {
+            int breakpoint = 888;
+        }
 
         if (numChannelsToAdd > 0)
             add (pc.buffers.audio.getFirstChannels (numChannelsToAdd),
@@ -266,12 +330,61 @@ void CombiningNode::process (ProcessContext& pc)
     const auto editTime = getEditTimeRange();
     const auto initialEvents = pc.buffers.midi.size();
 
+    // DEBUG =8> is the midi message missing or is it just out of the time range?
+    std::string debugNodeMidiMessages = "";
+    std::vector<double> midiBufferTimes;
+
+    for (auto element : this->midiBuffer)
+    {
+        debugNodeMidiMessages += element.getDescription().toStdString();
+        midiBufferTimes.push_back(element.getTimeStamp());
+    }
+
+    if (debugNodeMidiMessages != "")
+    {
+        int breakpoint = 8888;
+    }
+
+    // DEBUG =8> WHAT ABOUT THE PluginContext?
+    std::string debugPluginContextMidiMessages = "";
+    std::vector<double> midiBufferTimesPluginContext;
+
+    for (auto element : pc.buffers.midi)
+    {
+        debugPluginContextMidiMessages += element.getDescription().toStdString();
+        midiBufferTimesPluginContext.push_back(element.getTimeStamp());
+    }
+
+    if (debugPluginContextMidiMessages != "")
+    {
+        int breakpoint = 8888;
+    }
+
     // Merge any note-offs from clips that have been deleted
     pc.buffers.midi.mergeFromAndClear (noteOffEventsToSend);
+
+    // What's in the list of groups? =8> DEBUG
+    for (auto timedNodeGroup : groups)
+    {
+        int breakpoint = 8888;
+    }
+
+    std::vector<TimeRange> timedNodeTimes;
+    int groupsCounterWide = 0;
+    int groupsCounterNarrow = 0;
+    for (auto group : groups)
+    {
+        groupsCounterWide++;
+        for (auto timedNode : *group)
+        {
+            timedNodeTimes.push_back(timedNode->time);
+        }
+    }
 
     // Then process the list
     if (auto g = groups[combining_node_utils::timeToGroupIndex (editTime.getStart())])
     {
+        groupsCounterNarrow++;
         for (auto tan : *g)
         {
             if (tan->time.getEnd() > editTime.getStart())
@@ -288,6 +401,34 @@ void CombiningNode::process (ProcessContext& pc)
             }
         }
     }
+
+    std::string debugAfterTanProcess = "";
+    bool noteOnMessage = false;
+    bool textMetaMessage = false;
+    for (auto message : pc.buffers.midi)
+    {
+        debugAfterTanProcess += message.getDescription().toStdString() + '\n';
+        if (message.isNoteOn())
+        {
+            noteOnMessage = true;
+        }
+        else if (message.isTextMetaEvent())
+        {
+            textMetaMessage = true;
+        }
+    }
+
+    if (debugAfterTanProcess != "")
+    {
+        int breakpoint = 8888;
+    }
+
+    if (noteOnMessage && !textMetaMessage)
+    {
+        int breakpoint = 8888;
+    }
+
+    int breakpointTestGroupsCounters = 8888;
 
     if (pc.buffers.midi.size() > initialEvents)
         pc.buffers.midi.sortByTimestamp();

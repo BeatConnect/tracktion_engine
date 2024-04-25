@@ -320,7 +320,9 @@ private:
     choc::buffer::Size audioBufferSize;
     choc::buffer::ChannelArrayBuffer<float> audioBuffer;
     choc::buffer::ChannelArrayView<float> audioView, allocatedView;
-    tracktion_engine::MidiMessageArray midiBuffer;
+
+public: // =8> DEBUG
+    tracktion_engine::MidiMessageArray midiBuffer;  // =8> DEBUG
     std::atomic<int> numSamplesProcessed { 0 }, retainCount { 0 };
     NodeOptimisations nodeOptimisations;
 
@@ -447,10 +449,12 @@ inline void Node::process (choc::buffer::FrameCount numSamples, juce::Range<int6
         assert (audioBufferSize == allocatedView.getSize());
     }
 
+    bool midiCleared = false;
     if (nodeOptimisations.clear == ClearBuffers::yes)
     {
         audioBuffer.clear();
         midiBuffer.clear();
+        midiCleared = true;
     }
     
     const auto numChannelsBeforeProcessing = audioBuffer.getNumChannels();
@@ -474,8 +478,43 @@ inline void Node::process (choc::buffer::FrameCount numSamples, juce::Range<int6
     
     audioView = audioView.getStart (numSamples);
 
+
+    // DEBUG =8>
+    bool noteOnMessage = false;
+    bool textMetaMessage = false;
+
+    std::string midiBufferMessagesDebug = "";
+
+    for (auto &element : midiBuffer)
+    {
+        midiBufferMessagesDebug += element.getDescription().toStdString() + '\n';
+        if (element.isNoteOn())
+        {
+            noteOnMessage = true;
+        }
+        else if (element.isTextMetaEvent())
+        {
+            textMetaMessage = true;
+        }
+    }
+
+    if (noteOnMessage && !textMetaMessage)
+    {
+		int breakpoint = 8888;
+	}
+
+    if (midiBufferMessagesDebug != "")
+	{
+		int breakpoint = 8888;
+	}
+    // DEBUG =8>
+
     auto destAudioView = audioView;
     ProcessContext pc { numSamples, referenceSampleRange, { destAudioView, midiBuffer } };
+
+    // What is the content of the midiBuffer now? DEBUG =8>
+    const int midiBufferSizeAfterPc = midiBuffer.size();    
+
     process (pc);
     numSamplesProcessed.store ((int) numSamples, std::memory_order_release);
     
@@ -506,6 +545,31 @@ inline bool Node::hasProcessed() const
 inline Node::AudioAndMidiBuffer Node::getProcessedOutput()
 {
     jassert (hasProcessed());
+
+    // =8> DEBUG
+
+    bool noteOnInput = false;
+    bool textMetaInput = false;
+    std::string debugInputBuffersMidi = "";
+    for (auto element : midiBuffer)
+    {
+        debugInputBuffersMidi += element.getDescription().toStdString() + '\n';
+        if (element.isNoteOn())
+            noteOnInput = true;
+        else if (element.isTextMetaEvent())
+            textMetaInput = true;
+    }
+
+    if (noteOnInput && !textMetaInput)
+    {
+        int breakpoint = 8888;
+    }
+
+    if (debugInputBuffersMidi != "")
+    {
+        int breakpoint = 8888;
+    }
+
     return { audioView.getStart ((choc::buffer::FrameCount) numSamplesProcessed.load (std::memory_order_acquire)),
              midiBuffer };
 }

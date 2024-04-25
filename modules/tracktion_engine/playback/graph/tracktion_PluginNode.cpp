@@ -113,6 +113,33 @@ void PluginNode::prefetchBlock (juce::Range<int64_t>)
 void PluginNode::process (ProcessContext& pc)
 {
     auto inputBuffers = input->getProcessedOutput();
+
+    // =8> DEBUG
+
+    bool noteOnInput = false;
+    bool textMetaInput = false;
+    std::string debugInputBuffersMidi = "";
+    for (auto element : inputBuffers.midi)
+    {
+        debugInputBuffersMidi += element.getDescription().toStdString() + '\n';
+        if (element.isNoteOn())
+            noteOnInput = true;
+        else if (element.isTextMetaEvent())
+			textMetaInput = true;
+    }
+
+    if (noteOnInput && !textMetaInput)
+    {
+		int breakpoint = 8888;
+	}
+
+    if (debugInputBuffersMidi != "")
+    {
+         int breakpoint = 8888;
+    }
+    // =8> DEBUG
+
+
     auto& inputAudioBlock = inputBuffers.audio;
     
     auto& outputBuffers = pc.buffers;
@@ -179,8 +206,21 @@ void PluginNode::process (ProcessContext& pc)
         midiMessageArray.clear();
         midiMessageArray.isAllNotesOff = isAllNotesOff;
         
+        std::string debugMidiMessage = ""; // =8>
+
+        bool noteOn = false;
+        bool textMeta = false;
+
         for (auto end = inputBuffers.midi.end(); inputMidiIter != end; ++inputMidiIter)
         {
+            // =8> Debug
+            if (inputMidiIter->isNoteOn())
+				noteOn = true;
+			else if (inputMidiIter->isTextMetaEvent())
+				textMeta = true;
+            debugMidiMessage += inputMidiIter->getDescription().toStdString() + '\n';
+            // =8> Debug
+
             const auto timestamp = inputMidiIter->getTimeStamp();
 
             // If the time range is empty, we need to pass through all the MIDI as it means the playhead is stopped
@@ -191,6 +231,16 @@ void PluginNode::process (ProcessContext& pc)
             midiMessageArray.addMidiMessage (*inputMidiIter,
                                              timestamp - subBlockTimeRange.getStart().inSeconds(),
                                              inputMidiIter->mpeSourceID);
+        }
+
+        if (noteOn && !textMeta)
+        {
+            int breakpoint = 8888;
+        }
+
+        if (debugMidiMessage != "")
+        {
+            int breakpoint = 8888; // =8>
         }
         
         // Process the plugin
@@ -249,6 +299,31 @@ void PluginNode::initialisePlugin (double sampleRateToUse, int blockSizeToUse)
 
 PluginRenderContext PluginNode::getPluginRenderContext (TimeRange editTime, juce::AudioBuffer<float>& destBuffer)
 {
+    // DEBUG =8>
+
+    bool noteOn = false;
+    bool textMeta = false;
+
+    std::string debugMidiMessages = "";
+    for (auto &element : midiMessageArray)
+    {
+        debugMidiMessages += element.getDescription().toStdString() + '\n';
+        if (element.isNoteOn())
+			noteOn = true;
+		else if (element.isTextMetaEvent())
+			textMeta = true;
+    }
+
+    if (debugMidiMessages != "")
+    {
+        int breakpoint = 8888;
+    }
+
+    if (noteOn && !textMeta)
+    {
+        int breakpoint = 8888;
+    }
+
     return { &destBuffer,
              juce::AudioChannelSet::canonicalChannelSet (destBuffer.getNumChannels()),
              0, destBuffer.getNumSamples(),
