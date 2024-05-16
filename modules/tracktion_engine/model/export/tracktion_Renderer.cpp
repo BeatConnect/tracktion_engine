@@ -425,16 +425,28 @@ bool Renderer::renderToFile (const juce::String& taskDescription,
     {
         Parameters r (edit);
         r.destFile = outputFile;
-        r.audioFormat = edit.engine.getAudioFileFormatManager().getDefaultFormat();
+
+        if (outputFile.getFileExtension() == ".wav")
+            r.audioFormat = edit.engine.getAudioFileFormatManager().getWavFormat();
+        else if (outputFile.getFileExtension() == ".flac")
+            r.audioFormat = edit.engine.getAudioFileFormatManager().getFlacFormat();
+        else if (outputFile.getFileExtension() == ".ogg")
+            r.audioFormat = edit.engine.getAudioFileFormatManager().getOggFormat();
+        else
+        {
+            jassertfalse; // File format must be one of the supported types
+            r.audioFormat = edit.engine.getAudioFileFormatManager().getWavFormat();
+        }
+
         r.bitDepth = 24;
         r.sampleRateForAudio = edit.engine.getDeviceManager().getSampleRate();
         r.blockSizeForAudio  = edit.engine.getDeviceManager().getBlockSize();
         r.time = range;
         r.addAntiDenormalisationNoise = EditPlaybackContext::shouldAddAntiDenormalisationNoise (engine);
         r.usePlugins = usePlugins;
-        r.useMasterPlugins = usePlugins;
+        r.useMasterPlugins = usePlugins; // =8> What is the value of usePlugins?
         r.tracksToDo = tracksToDo;
-        r.allowedClips = clips;
+        r.allowedClips = clips; // =8> What is the value of clips?
         r.createMidiFile = outputFile.hasFileExtension (".mid");
 
         addAcidInfo (edit, r);
