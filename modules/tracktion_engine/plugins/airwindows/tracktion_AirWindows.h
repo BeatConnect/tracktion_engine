@@ -170,6 +170,7 @@ AIRWINDOWSPLUGIN(AirWindowsConsole5Channel, "Console 5 Channel");
 AIRWINDOWSPLUGIN(AirWindowsConsole5DarkCh, "Console 5 Dark Ch");
 AIRWINDOWSPLUGIN(AirWindowsConsole6Buss, "Console 6 Buss");
 AIRWINDOWSPLUGIN(AirWindowsConsole6Channel, "Console 6 Channel");
+AIRWINDOWSPLUGIN(AirWindowsCreature, "Creature");
 AIRWINDOWSPLUGIN(AirWindowsCrunchyGrooveWear, "Crunchy Groove Wear");
 AIRWINDOWSPLUGIN(AirWindowsCrystal, "Crystal");
 AIRWINDOWSPLUGIN(AirWindowsDCVoltage, "DC Voltage");

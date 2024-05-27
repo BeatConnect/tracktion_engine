@@ -369,6 +369,7 @@ const char* AirWindowsConsole5Channel::xmlTypeName = "airwindows_console5channel
 const char* AirWindowsConsole5DarkCh::xmlTypeName = "airwindows_console5darkch";
 const char* AirWindowsConsole6Buss::xmlTypeName = "airwindows_console6buss";
 const char* AirWindowsConsole6Channel::xmlTypeName = "airwindows_console6channel";
+const char* AirWindowsCreature::xmlTypeName = "airwindows_creature";
 const char* AirWindowsCrunchyGrooveWear::xmlTypeName = "airwindows_crunchygroovewear";
 const char* AirWindowsCrystal::xmlTypeName = "airwindows_crystal";
 const char* AirWindowsDCVoltage::xmlTypeName = "airwindows_dcvoltage";
@@ -563,6 +564,7 @@ AirWindowsConsole5Channel::Type AirWindowsConsole5Channel::pluginType = AirWindo
 AirWindowsConsole5DarkCh::Type AirWindowsConsole5DarkCh::pluginType = AirWindowsPlugin::emulation;
 AirWindowsConsole6Buss::Type AirWindowsConsole6Buss::pluginType = AirWindowsPlugin::emulation;
 AirWindowsConsole6Channel::Type AirWindowsConsole6Channel::pluginType = AirWindowsPlugin::emulation;
+AirWindowsCreature::Type AirWindowsCreature::pluginType = AirWindowsPlugin::filter;
 AirWindowsCrunchyGrooveWear::Type AirWindowsCrunchyGrooveWear::pluginType = AirWindowsPlugin::emulation;
 AirWindowsCrystal::Type AirWindowsCrystal::pluginType = AirWindowsPlugin::filter;
 AirWindowsDCVoltage::Type AirWindowsDCVoltage::pluginType = AirWindowsPlugin::utility;
@@ -800,6 +802,8 @@ AirWindowsConsole6Buss::AirWindowsConsole6Buss (PluginCreationInfo info)
     : AirWindowsPlugin (info, std::make_unique<airwindows::console6buss::Console6Buss> (&callback)) {}
 AirWindowsConsole6Channel::AirWindowsConsole6Channel (PluginCreationInfo info)
     : AirWindowsPlugin (info, std::make_unique<airwindows::console6channel::Console6Channel> (&callback)) {}
+AirWindowsCreature::AirWindowsCreature (PluginCreationInfo info)
+    : AirWindowsPlugin (info, std::make_unique<airwindows::creature::Creature>(&callback)) {}
 AirWindowsCrunchyGrooveWear::AirWindowsCrunchyGrooveWear (PluginCreationInfo info)
     : AirWindowsPlugin (info, std::make_unique<airwindows::crunchygroovewear::CrunchyGrooveWear> (&callback)) {}
 AirWindowsCrystal::AirWindowsCrystal (PluginCreationInfo info)
