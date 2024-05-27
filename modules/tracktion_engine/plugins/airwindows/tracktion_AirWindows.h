@@ -222,6 +222,7 @@ AIRWINDOWSPLUGIN(AirWindowsHighpass, "Highpass");
 AIRWINDOWSPLUGIN(AirWindowsHighpass2, "Highpass 2");
 AIRWINDOWSPLUGIN(AirWindowsHolt, "Holt");
 AIRWINDOWSPLUGIN(AirWindowsHombre, "Hombre");
+AIRWINDOWSPLUGIN(AirWindowsHuge, "Huge");
 AIRWINDOWSPLUGIN(AirWindowsInflamer, "Inflamer");
 AIRWINDOWSPLUGIN(AirWindowsInterstage, "Interstage");
 AIRWINDOWSPLUGIN(AirWindowsIronOxide5, "Iron Oxide 5");

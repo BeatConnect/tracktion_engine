@@ -421,6 +421,7 @@ const char* AirWindowsHighpass::xmlTypeName = "airwindows_highpass";
 const char* AirWindowsHighpass2::xmlTypeName = "airwindows_highpass2";
 const char* AirWindowsHolt::xmlTypeName = "airwindows_holt";
 const char* AirWindowsHombre::xmlTypeName = "airwindows_hombre";
+const char* AirWindowsHuge::xmlTypeName = "airwindows_huge";
 const char* AirWindowsInterstage::xmlTypeName = "airwindows_interstage";
 const char* AirWindowsInflamer::xmlTypeName = "airwindows_inflamer";
 const char* AirWindowsIronOxide5::xmlTypeName = "airwindows_ironoxide5";
@@ -616,6 +617,7 @@ AirWindowsHighpass2::Type AirWindowsHighpass2::pluginType = AirWindowsPlugin::fi
 AirWindowsHighpass::Type AirWindowsHighpass::pluginType = AirWindowsPlugin::filter;
 AirWindowsHolt::Type AirWindowsHolt::pluginType = AirWindowsPlugin::filter;
 AirWindowsHombre::Type AirWindowsHombre::pluginType = AirWindowsPlugin::delay;
+AirWindowsHombre::Type AirWindowsHuge::pluginType = AirWindowsPlugin::delay;
 AirWindowsInflamer::Type AirWindowsInflamer::pluginType = AirWindowsPlugin::filter;
 AirWindowsInterstage::Type AirWindowsInterstage::pluginType = AirWindowsPlugin::filter;
 AirWindowsIronOxide5::Type AirWindowsIronOxide5::pluginType = AirWindowsPlugin::emulation;
@@ -906,6 +908,8 @@ AirWindowsHolt::AirWindowsHolt (PluginCreationInfo info)
     : AirWindowsPlugin (info, std::make_unique<airwindows::holt::Holt> (&callback)) {}
 AirWindowsHombre::AirWindowsHombre (PluginCreationInfo info)
     : AirWindowsPlugin (info, std::make_unique<airwindows::hombre::Hombre> (&callback)) {}
+AirWindowsHuge::AirWindowsHuge (PluginCreationInfo info)
+	: AirWindowsPlugin (info, std::make_unique<airwindows::huge::Huge> (&callback)) {}
 AirWindowsInterstage::AirWindowsInterstage (PluginCreationInfo info)
     : AirWindowsPlugin (info, std::make_unique<airwindows::interstage::Interstage> (&callback)) {}
 AirWindowsInflamer::AirWindowsInflamer(PluginCreationInfo info)
