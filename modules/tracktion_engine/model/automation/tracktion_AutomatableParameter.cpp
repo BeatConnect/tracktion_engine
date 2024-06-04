@@ -35,18 +35,31 @@ namespace AutomationScaleHelpers
         return y;
     }
 
-    // Write the formula for a Bézier curve
-
     inline float getCurvedValue (float value, float start, float end, float curve) noexcept
     {
         if (curve == 0.0f)
             return ((end - start) * value) + start;
 
+        if (false /*linear*/)
+        {
+            curve = 0.5;
+        }
+
         auto control = getQuadraticBezierControlPoint (start, end, curve);
         auto inverseControl = getQuadraticBezierControlPoint (end, start, curve);
-        auto debugThingy = AutomationCurve::getBezierXfromT(value, start, control, end); // =8>
-        int breakpoint = 8888; // =8>
 
+        // =8>
+        // SIGMOID ZONE
+
+        float maximum = 1;
+        float midpoint = 0.5f;
+        float result = maximum / (1 + exp(-(value - midpoint) * curve * 10));
+
+        // SIGMOID ZONE
+        // =8>
+        
+        float testBezier = (float) AutomationCurve::getBezierXfromT (value, start, inverseControl, end); // =8>
+        int breakpoint = 8888; // =8>
         return (float) AutomationCurve::getBezierXfromT (value, start, inverseControl, end); // =8>
         // return (float) AutomationCurve::getBezierXfromT (value, start, control, end);
     }
