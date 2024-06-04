@@ -15,7 +15,7 @@ namespace AutomationScaleHelpers
 {
     inline float getQuadraticBezierControlPoint (float y1, float y2, float curve) noexcept
     {
-        jassert (curve >= -0.5f && curve <= 0.5f);
+        // jassert (curve >= -0.5f && curve <= 0.5f); // =8>
 
         auto c = juce::jlimit (-1.0f, 1.0f, curve * 2.0f);
 
@@ -35,13 +35,20 @@ namespace AutomationScaleHelpers
         return y;
     }
 
+    // Write the formula for a Bézier curve
+
     inline float getCurvedValue (float value, float start, float end, float curve) noexcept
     {
         if (curve == 0.0f)
             return ((end - start) * value) + start;
 
         auto control = getQuadraticBezierControlPoint (start, end, curve);
-        return (float) AutomationCurve::getBezierXfromT (value, start, control, end);
+        auto inverseControl = getQuadraticBezierControlPoint (end, start, curve);
+        auto debugThingy = AutomationCurve::getBezierXfromT(value, start, control, end); // =8>
+        int breakpoint = 8888; // =8>
+
+        return (float) AutomationCurve::getBezierXfromT (value, start, inverseControl, end); // =8>
+        // return (float) AutomationCurve::getBezierXfromT (value, start, control, end);
     }
 
     inline float mapValue (float inputVal, float offset, float value, float curve) noexcept
@@ -148,6 +155,9 @@ struct ModifierAutomationSource : public AutomationModifierSource
         if (deltaTime > TimeDuration() && deltaTime < Modifier::maxHistoryTime)
             baseValue = modifier->getValueAt (deltaTime);
         
+        // =8> DEBUG See if the values here are different.
+        float debugMappedValue = AutomationScaleHelpers::mapValue(baseValue, assignment->offset, assignment->value, assignment->curve); // =8>
+
         return AutomationScaleHelpers::mapValue (baseValue, assignment->offset, assignment->value, assignment->curve);
     }
 

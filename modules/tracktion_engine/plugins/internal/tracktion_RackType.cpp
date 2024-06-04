@@ -1428,6 +1428,17 @@ void RackType::valueTreePropertyChanged (juce::ValueTree& v, const juce::Identif
         if (ident != IDs::x && ident != IDs::y && ident != IDs::windowLocked && ident != IDs::windowPos)
             triggerUpdate();
 
+    std::string debugV = v.toXmlString().toStdString(); // =8>
+
+    if (v.hasType("curveType"))
+    {
+        auto macroParameters = macroParameterList.getMacroParameters();
+        for (auto element : macroParameters)
+        {
+            int breakpoint = 8888;
+        }
+    }
+
     if (v == state && ident == IDs::name)
     {
         rackName.forceUpdateOfCachedValue();
