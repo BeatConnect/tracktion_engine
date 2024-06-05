@@ -54,6 +54,7 @@ namespace AutomationScaleHelpers
         return (float) AutomationCurve::getBezierXfromT (value, start, control, end);
     }
 
+    // BEATCONNECT MODIFICATION START
     inline float getCurvedValue(float value, float start, float end, float curve, CurveType p_curveType) noexcept
     {
         if (curve == 0.0f || p_curveType == CurveType::linear)
@@ -80,6 +81,7 @@ namespace AutomationScaleHelpers
 
         jassertfalse;
     }
+    // BEATCONNECT MODIFICATION END
 
     inline float mapValue (float inputVal, float offset, float value, float curve) noexcept
     {
@@ -87,11 +89,13 @@ namespace AutomationScaleHelpers
                               : offset + getCurvedValue (inputVal, 0.0f, value, curve);
     }
 
+    // BEATCONNECT MODIFICATION START
     inline float mapValue(float inputVal, float offset, float value, float curve, CurveType p_curveType) noexcept
     {
         return inputVal < 0.0 ? offset - getCurvedValue(-inputVal, 0.0f, value, curve, p_curveType)
             : offset + getCurvedValue(inputVal, 0.0f, value, curve, p_curveType);
     }
+    // BEATCONNECT MODIFICATION END
 
     inline float limitInputValue (float inputVal, juce::Range<float> inputRange)
     {
