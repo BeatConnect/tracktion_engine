@@ -365,6 +365,7 @@ struct MacroSource : public AutomationModifierSource
         macro->updateFromAutomationSources (time);
         auto macroValue = macro->getCurrentValue();
         
+        // BEATCONNECT MODIFICATION START
         AutomationScaleHelpers::CurveType curveType;
 
         if (!assignment->state.hasProperty("curveType"))
@@ -375,6 +376,7 @@ struct MacroSource : public AutomationModifierSource
         const auto range = juce::Range<float>::between (assignment->inputLimitStart.get(), assignment->inputLimitEnd.get());      
         currentValue.store (AutomationScaleHelpers::mapValue (AutomationScaleHelpers::limitInputValue (macroValue, range), assignment->offset, assignment->value, 
             assignment->curve, curveType), std::memory_order_release);
+        // BEATCONNECT MODIFICATION END
     }
 
     bool isEnabled() override
