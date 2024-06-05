@@ -13,6 +13,16 @@ namespace tracktion { inline namespace engine
 
 namespace AutomationScaleHelpers
 {
+    // BEATCONNECT MODIFICATION START
+    enum class CurveType
+    {
+        linear = 0,
+        exponential = 1,
+        inverseExponential = 2,
+        sigmoid = 3
+    };
+    // BEATCONNECT MODIFICATION END
+
     inline float getQuadraticBezierControlPoint (float y1, float y2, float curve) noexcept
     {
         // jassert (curve >= -0.5f && curve <= 0.5f); // =8>
@@ -40,34 +50,47 @@ namespace AutomationScaleHelpers
         if (curve == 0.0f)
             return ((end - start) * value) + start;
 
-        if (false /*linear*/)
+        auto control = getQuadraticBezierControlPoint (start, end, curve);
+        return (float) AutomationCurve::getBezierXfromT (value, start, control, end);
+    }
+
+    inline float getCurvedValue(float value, float start, float end, float curve, CurveType p_curveType) noexcept
+    {
+        if (curve == 0.0f || p_curveType == CurveType::linear)
         {
-            curve = 0.5;
+            return ((end - start) * value) + start;
+        }
+        else if (p_curveType == CurveType::exponential) 
+        {
+            // Use the Bézier curve for "exponential" scaling because it gives nicer beginning and ending values.
+            return (float)AutomationCurve::getBezierXfromT(value, start, getQuadraticBezierControlPoint(start, end, curve), end);
+        } 
+        else if (p_curveType == CurveType::inverseExponential)
+        {
+            // By swapping the start and end points we work backwards through the curve, thereby providing inverted values.
+            return (float)AutomationCurve::getBezierXfromT(value, start, getQuadraticBezierControlPoint(end, start, curve), end);
+        }
+        else if (p_curveType == CurveType::sigmoid)
+        {
+            // Scale values against 0 to 1 as percentage with 0.5 as the midpoint.
+            const float maximum = 1;
+            const float midpoint = 0.5f;
+            return maximum / (1 + exp(-(value - midpoint) * curve * 10));
         }
 
-        auto control = getQuadraticBezierControlPoint (start, end, curve);
-        auto inverseControl = getQuadraticBezierControlPoint (end, start, curve);
-
-        // =8>
-        // SIGMOID ZONE
-
-        float maximum = 1;
-        float midpoint = 0.5f;
-        float result = maximum / (1 + exp(-(value - midpoint) * curve * 10));
-
-        // SIGMOID ZONE
-        // =8>
-        
-        float testBezier = (float) AutomationCurve::getBezierXfromT (value, start, inverseControl, end); // =8>
-        int breakpoint = 8888; // =8>
-        return (float) AutomationCurve::getBezierXfromT (value, start, inverseControl, end); // =8>
-        // return (float) AutomationCurve::getBezierXfromT (value, start, control, end);
+        jassertfalse;
     }
 
     inline float mapValue (float inputVal, float offset, float value, float curve) noexcept
     {
         return inputVal < 0.0 ? offset - getCurvedValue (-inputVal, 0.0f, value, curve)
                               : offset + getCurvedValue (inputVal, 0.0f, value, curve);
+    }
+
+    inline float mapValue(float inputVal, float offset, float value, float curve, CurveType p_curveType) noexcept
+    {
+        return inputVal < 0.0 ? offset - getCurvedValue(-inputVal, 0.0f, value, curve, p_curveType)
+            : offset + getCurvedValue(inputVal, 0.0f, value, curve, p_curveType);
     }
 
     inline float limitInputValue (float inputVal, juce::Range<float> inputRange)
@@ -169,13 +192,23 @@ struct ModifierAutomationSource : public AutomationModifierSource
             baseValue = modifier->getValueAt (deltaTime);
         
         // =8> DEBUG See if the values here are different.
+        std::string testAssignment = assignment->state.toXmlString().toStdString();
+        int breakpoint = 8888; // =8>
         float debugMappedValue = AutomationScaleHelpers::mapValue(baseValue, assignment->offset, assignment->value, assignment->curve); // =8>
 
         return AutomationScaleHelpers::mapValue (baseValue, assignment->offset, assignment->value, assignment->curve);
     }
 
+    void setCurveType(AutomationScaleHelpers::CurveType p_curveType)
+    {
+        m_curveType = p_curveType;
+    }
+
     const Modifier::Ptr modifier;
     TimePosition editTimeToReturn;
+
+private:
+    AutomationScaleHelpers::CurveType m_curveType = AutomationScaleHelpers::CurveType::exponential;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ModifierAutomationSource)
 };
@@ -340,11 +373,23 @@ struct MacroSource : public AutomationModifierSource
         const juce::ScopedLock sl (streamPositionLock);
         macro->updateFromAutomationSources (time);
         auto macroValue = macro->getCurrentValue();
+        
+        AutomationScaleHelpers::CurveType curveType;
+
+        if (!assignment->state.hasProperty("curveType"))
+            curveType = AutomationScaleHelpers::CurveType::exponential;
+        else
+            curveType = (AutomationScaleHelpers::CurveType)(int)assignment->state.getProperty("curveType");
+
+        std::string debugMacro = macro->state.toXmlString().toStdString(); // =8>
+        std::string debugAssignment = assignment->state.toXmlString().toStdString(); // =8>
+        int breakpoint = 8888; // =8>
 
         const auto range = juce::Range<float>::between (assignment->inputLimitStart.get(), assignment->inputLimitEnd.get());
-        currentValue.store (AutomationScaleHelpers::mapValue (AutomationScaleHelpers::limitInputValue (macroValue, range),
-                                                              assignment->offset, assignment->value, assignment->curve),
-                            std::memory_order_release);
+        //currentValue.store (AutomationScaleHelpers::mapValue (AutomationScaleHelpers::limitInputValue (macroValue, range),
+        //    assignment->offset, assignment->value, assignment->curve), std::memory_order_release);        
+        currentValue.store (AutomationScaleHelpers::mapValue (AutomationScaleHelpers::limitInputValue (macroValue, range), assignment->offset, assignment->value, 
+            assignment->curve, curveType), std::memory_order_release);
     }
 
     bool isEnabled() override
