@@ -194,11 +194,6 @@ struct ModifierAutomationSource : public AutomationModifierSource
         return AutomationScaleHelpers::mapValue (baseValue, assignment->offset, assignment->value, assignment->curve);
     }
 
-    void setCurveType(AutomationScaleHelpers::CurveType p_curveType)
-    {
-        m_curveType = p_curveType;
-    }
-
     const Modifier::Ptr modifier;
     TimePosition editTimeToReturn;
 
