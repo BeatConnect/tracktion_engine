@@ -25,7 +25,7 @@ namespace AutomationScaleHelpers
 
     inline float getQuadraticBezierControlPoint (float y1, float y2, float curve) noexcept
     {
-        // jassert (curve >= -0.5f && curve <= 0.5f); // =8>
+        jassert (curve >= -0.5f && curve <= 0.5f);
 
         auto c = juce::jlimit (-1.0f, 1.0f, curve * 2.0f);
 
@@ -190,11 +190,6 @@ struct ModifierAutomationSource : public AutomationModifierSource
         
         if (deltaTime > TimeDuration() && deltaTime < Modifier::maxHistoryTime)
             baseValue = modifier->getValueAt (deltaTime);
-        
-        // =8> DEBUG See if the values here are different.
-        std::string testAssignment = assignment->state.toXmlString().toStdString();
-        int breakpoint = 8888; // =8>
-        float debugMappedValue = AutomationScaleHelpers::mapValue(baseValue, assignment->offset, assignment->value, assignment->curve); // =8>
 
         return AutomationScaleHelpers::mapValue (baseValue, assignment->offset, assignment->value, assignment->curve);
     }
@@ -206,9 +201,6 @@ struct ModifierAutomationSource : public AutomationModifierSource
 
     const Modifier::Ptr modifier;
     TimePosition editTimeToReturn;
-
-private:
-    AutomationScaleHelpers::CurveType m_curveType = AutomationScaleHelpers::CurveType::exponential;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ModifierAutomationSource)
 };
@@ -381,13 +373,7 @@ struct MacroSource : public AutomationModifierSource
         else
             curveType = (AutomationScaleHelpers::CurveType)(int)assignment->state.getProperty("curveType");
 
-        std::string debugMacro = macro->state.toXmlString().toStdString(); // =8>
-        std::string debugAssignment = assignment->state.toXmlString().toStdString(); // =8>
-        int breakpoint = 8888; // =8>
-
-        const auto range = juce::Range<float>::between (assignment->inputLimitStart.get(), assignment->inputLimitEnd.get());
-        //currentValue.store (AutomationScaleHelpers::mapValue (AutomationScaleHelpers::limitInputValue (macroValue, range),
-        //    assignment->offset, assignment->value, assignment->curve), std::memory_order_release);        
+        const auto range = juce::Range<float>::between (assignment->inputLimitStart.get(), assignment->inputLimitEnd.get());      
         currentValue.store (AutomationScaleHelpers::mapValue (AutomationScaleHelpers::limitInputValue (macroValue, range), assignment->offset, assignment->value, 
             assignment->curve, curveType), std::memory_order_release);
     }
