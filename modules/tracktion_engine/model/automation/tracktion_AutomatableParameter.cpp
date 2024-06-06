@@ -368,10 +368,10 @@ struct MacroSource : public AutomationModifierSource
         // BEATCONNECT MODIFICATION START
         AutomationScaleHelpers::CurveType curveType;
 
-        if (!assignment->state.hasProperty("curveType"))
+        if (!assignment->state.hasProperty(IDs::curveType))
             curveType = AutomationScaleHelpers::CurveType::exponential;
         else
-            curveType = (AutomationScaleHelpers::CurveType)(int)assignment->state.getProperty("curveType");
+            curveType = (AutomationScaleHelpers::CurveType)(int)assignment->state.getProperty(IDs::curveType);
 
         const auto range = juce::Range<float>::between (assignment->inputLimitStart.get(), assignment->inputLimitEnd.get());      
         currentValue.store (AutomationScaleHelpers::mapValue (AutomationScaleHelpers::limitInputValue (macroValue, range), assignment->offset, assignment->value, 
