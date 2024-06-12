@@ -568,6 +568,7 @@ PluginList* Plugin::getOwnerList() const
 }
 
 //==============================================================================
+
 AutomatableParameter* Plugin::addParam (const juce::String& paramID, const juce::String& name,
                                         juce::NormalisableRange<float> valueRange)
 {

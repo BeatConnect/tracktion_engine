@@ -197,7 +197,8 @@ public:
     //==============================================================================
     juce::String getSelectableDescription() override    { return TRANS("Automation Parameter"); }
 
-    const juce::String paramName;
+    // const juce::String paramName;
+    juce::String paramName; // =8>
     juce::ValueTree parentState;
 
     //==============================================================================

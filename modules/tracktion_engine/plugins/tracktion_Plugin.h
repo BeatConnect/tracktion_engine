@@ -400,6 +400,7 @@ protected:
 
     virtual void processingChanged();
 
+public:
     //==============================================================================
     AutomatableParameter* addParam (const juce::String& paramID, const juce::String& name, juce::NormalisableRange<float> valueRange);
     AutomatableParameter* addParam (const juce::String& paramID, const juce::String& name, juce::NormalisableRange<float> valueRange,
