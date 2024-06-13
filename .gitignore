@@ -31,7 +31,6 @@ Tracktion/**/[Rr]elease64*/
 build/
 build*/
 *.o
-tests/build/
 
 # Other source repository archive directories (protects when importing)
 .hg
