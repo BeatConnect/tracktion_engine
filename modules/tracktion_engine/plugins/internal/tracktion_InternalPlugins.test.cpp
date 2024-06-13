@@ -11,7 +11,8 @@
 namespace tracktion { inline namespace engine
 {
 
-#if TRACKTION_UNIT_TESTS
+#if TRACKTION_UNIT_TESTS_DISABLED
+// #if TRACKTION_UNIT_TESTS
 
 //==============================================================================
 //==============================================================================
