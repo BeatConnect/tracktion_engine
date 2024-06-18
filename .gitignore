@@ -70,7 +70,6 @@ install/tracktion/Tracktion6
 install/tracktion/Tracktion7
 tracktion*.deb
 
-examples
 bin
 doxygen/doc
 **/cmake-build**

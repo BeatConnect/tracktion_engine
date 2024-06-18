@@ -103,6 +103,7 @@ struct DemoTypeBase
 #include "demos/PluginDemo.h"
 // #include "demos/RecordingDemo.h"
 // #include "demos/StepSequencerDemo.h"
+#include "demos/TestDemo.h"
 
 
 //==============================================================================
@@ -137,6 +138,7 @@ public:
             o.content.setOwned (v);
             o.launchAsync();
         };
+        int breakpoint = 8888; // =8>
         audioSettingsButton.onClick = [this] { EngineHelpers::showAudioDeviceSettings (engine); };
 
         currentDemoName.setJustificationType (juce::Justification::centred);
