@@ -137,7 +137,7 @@ public:
             o.content.setOwned (v);
             o.launchAsync();
         };
-        [[maybe_unused]] int breakpoint = 8888; // =8>
+
         audioSettingsButton.onClick = [this] { EngineHelpers::showAudioDeviceSettings (engine); };
 
         currentDemoName.setJustificationType (juce::Justification::centred);
