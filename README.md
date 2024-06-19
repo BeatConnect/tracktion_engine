@@ -48,6 +48,9 @@ $ ./generate_examples
 
 Once the example projects have been generated or built you can find them in `examples/example_name/build`.
 
+## BeatConnect Specific Building and Usage Instructions
+Refer to tests/README.md
+
 ## Tutorials
 Once you're ready to dive in to the code, open the IDE files and have a read through the tutorials in `/tutorials`. You can view these on GitHub [here](/tutorials) to see the rendered Markdown.
 
