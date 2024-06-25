@@ -60,6 +60,8 @@ public:
     // BEATCONNECT MODIFICATION START
     void getPacketDetails(float& startTime, float& endTime, int& sizeInBytes, int& numberOfThumbSamplesPerChannel);
     bool getThumbnailMinMaxValues(int8_t* minValues, int8_t* maxValues, uint32_t length);
+    // Returns and sets numberOfThumbSamplesPerChannelToRead from all channels
+    int getNumberOfTotalThumbSamples();
     // BEATCONNECT MODIFICATION END
 
 private:
@@ -97,8 +99,6 @@ private:
     // BEATCONNECT MODIFICATION START
     // Returns numberOfThumbSamplesPerChannelToRead from a channel
     int getNumberOfThumbSamples(int channel);
-    // Returns and sets numberOfThumbSamplesPerChannelToRead from all channels
-    int getNumberOfTotalThumbSamples();
     // BEATCONNECT MODIFICATION END
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (TracktionThumbnail)
