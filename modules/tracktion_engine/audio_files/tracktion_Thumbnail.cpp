@@ -875,6 +875,12 @@ void TracktionThumbnail::drawChannels (juce::Graphics& g, juce::Rectangle<int> a
     }
 }
 
+void TracktionThumbnail::computeNumberOfThumbSamplesPerChannelToRead()
+{
+    // NumberOfThumbSamplesPerChannelToRead is a state variable for getThumbnailAverageValues that will be called later on
+    numberOfThumbSamplesPerChannelToRead = numChannels > 0 ? getNumberOfThumbSamples(0) : 0;
+}
+
 // BEATCONNECT MODIFICATION START !?*&
 void TracktionThumbnail::getPacketDetails(float& startTime, float& endTime, int& sizeInBytes, int& numberOfThumbSamplesPerChannel)
 {
@@ -891,9 +897,8 @@ void TracktionThumbnail::getPacketDetails(float& startTime, float& endTime, int&
     // All channels will always have the same number of samples for a thumbnail
     startTime = (float)startThumbSampleIndex * samplesPerThumbSample / (float)sampleRate;
     endTime = (float)channels[0]->getSize() * samplesPerThumbSample / (float)sampleRate;
-
-    // NumberOfThumbSamplesPerChannelToRead is a state variable for getThumbnailAverageValues that will be called later on
-    numberOfThumbSamplesPerChannelToRead = numChannels > 0 ? getNumberOfThumbSamples(0) : 0;
+    
+    computeNumberOfThumbSamplesPerChannelToRead();
     sizeInBytes = getNumberOfTotalThumbSamples();
     numberOfThumbSamplesPerChannel = numberOfThumbSamplesPerChannelToRead;
 }
