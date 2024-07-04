@@ -19,6 +19,10 @@
 
 #include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_AdditiveSynthesiserPlugin.h"
 #include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_AdditiveSynthesiserPlugin.cpp"
+#include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_AdditiveSynthesiserVoice.h"
+#include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_AdditiveSynthesiserVoice.cpp"
+#include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_SineVoice.h"
+#include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_SineVoice.cpp"
 
 class AdditiveSynthesiserPluginDemo : public Component, private ChangeListener
 {
@@ -49,11 +53,16 @@ public:
 
         // Creates new instance of AdditiveSynthesiserPlugin and inserts to track 1
         auto plugin = edit.getPluginCache().createNewPlugin(BeatConnect::AdditiveSynthesiserPlugin::xmlTypeName, {});
+
+        BeatConnect::AdditiveSynthesiserPlugin* additiveSynthesiserPlugin = dynamic_cast<BeatConnect::AdditiveSynthesiserPlugin*>(plugin.get());
+        // additiveSynthesiserPlugin->addVoice
+
         track->pluginList.insertPlugin(plugin, 0, nullptr);
 
         //// Set the loop points to the start/end of the clip, enable looping and start playback
         //edit.getTransport().addChangeListener(this);
         //EngineHelpers::loopAroundClip(*clip);
+        EngineHelpers::togglePlay(edit); // =8>
 
         // Setup button callbacks
         playPauseButton.onClick = [this] { EngineHelpers::togglePlay(edit); };
