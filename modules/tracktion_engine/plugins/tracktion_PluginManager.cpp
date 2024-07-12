@@ -416,7 +416,7 @@ void PluginManager::initialise()
     // createBuiltInType<ChorusPlugin>(); // BEATCONNECT MODIFICATION
     createBuiltInType<DelayPlugin>();
     // createBuiltInType<PhaserPlugin>(); // BEATCONNECT MODIFICATION
-    // createBuiltInType<PitchShiftPlugin>(); // BEATCONNECT MODIFICATION
+    createBuiltInType<PitchShiftPlugin>(); // BEATCONNECT MODIFICATION // =8>
     createBuiltInType<LowPassPlugin>();
     createBuiltInType<SamplerPlugin>();
     createBuiltInType<FourOscPlugin>();
