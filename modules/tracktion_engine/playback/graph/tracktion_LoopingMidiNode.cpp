@@ -1156,7 +1156,10 @@ public:
                          MidiMessageArray::MPESourceID midiSourceID,
                          bool isPlaying,
                          bool isContiguousWithPreviousBlock,
-                         bool lastBlockOfLoop)
+                         bool lastBlockOfLoop,
+                         // BEATCONNECT MODIFICATION START  
+                         const EditItemID& editItemID)
+                         // BEATCONNECT MODIFICATION END
     {
         const auto secondsPerBeat = sectionEditTimeRange.getLength() / sectionEditBeatRange.getLength().inBeats();
         const auto blockStartBeatRelativeToClip = sectionEditBeatRange.getStart() - editRange.getStart();
@@ -1236,7 +1239,13 @@ public:
                     break;
 
                 auto e = generator->getEvent();
+
                 const EditBeatPosition editBeatPosition = e.getTimeStamp();
+
+                // BEATCONNECT MODIFICATION START  
+                e.setTimeInClip(editBeatPosition);
+                e.setEditItemID((int)editItemID.getRawID());
+                // BEATCONNECT MODIFICATION END
 
                 // Ensure we stop at the clip end
                 if (editBeatPosition >= clipIntersection.getEnd().inBeats())
@@ -1435,7 +1444,10 @@ void LoopingMidiNode::process (ProcessContext& pc)
                                           midiSourceID,
                                           isPlaying,
                                           getPlayHeadState().isContiguousWithPreviousBlock(),
-                                          getPlayHeadState().isLastBlockOfLoop());
+                                          getPlayHeadState().isLastBlockOfLoop(),
+                                          // BEATCONNECT MODIFICATION START  
+                                          getItemID());
+                                          // BEATCONNECT MODIFICATION END
 }
 
 }} // namespace tracktion { inline namespace engine
