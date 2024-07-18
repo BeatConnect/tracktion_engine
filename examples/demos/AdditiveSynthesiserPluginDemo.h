@@ -23,6 +23,8 @@
 #include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_AdditiveSynthesiserVoice.cpp"
 #include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_SineVoice.h"
 #include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_SineVoice.cpp"
+#include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_PulseVoice.h"
+#include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_PulseVoice.cpp"
 
 class AdditiveSynthesiserPluginDemo : public Component, private ChangeListener
 {
