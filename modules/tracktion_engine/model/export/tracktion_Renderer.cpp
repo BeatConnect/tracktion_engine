@@ -416,7 +416,7 @@ bool Renderer::renderToFile (const juce::String& taskDescription,
     for (auto bit = tracksToDo.findNextSetBit (0); bit != -1; bit = tracksToDo.findNextSetBit (bit + 1))
         tracks.add (getAllTracks (edit)[bit]);
 
-    const FreezePointPlugin::ScopedTrackSoloIsolator isolator (edit, tracks);
+    // const FreezePointPlugin::ScopedTrackSoloIsolator isolator (edit, tracks); // =8>
 
     TransportControl::stopAllTransports (engine, false, true);
     turnOffAllPlugins (edit);
