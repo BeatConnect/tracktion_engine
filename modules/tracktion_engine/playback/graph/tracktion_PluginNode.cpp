@@ -112,6 +112,18 @@ void PluginNode::prefetchBlock (juce::Range<int64_t>)
 
 void PluginNode::process (ProcessContext& pc)
 {
+    // Can I learn the type of plugin I'm processing? // =8>
+
+    std::vector<std::string> debugMidiMessages;
+    bool breakFlag = false;
+    for (auto element : this->midiMessageArray)
+    {
+        debugMidiMessages.push_back(element.getDescription().toStdString());
+        breakFlag = true;
+    }
+
+    int breakpoint = 8888; // =8> 
+
     auto inputBuffers = input->getProcessedOutput();
     auto& inputAudioBlock = inputBuffers.audio;
     

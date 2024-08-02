@@ -154,6 +154,7 @@ Renderer::RenderTask::RenderTask (const juce::String& taskDescription,
      progress (progressToUpdate == nullptr ? progressInternal : *progressToUpdate),
      sourceToUpdate (source)
 {
+    int breakpoint = 8888; // =8>
 }
 
 Renderer::RenderTask::~RenderTask()
@@ -413,8 +414,26 @@ bool Renderer::renderToFile (const juce::String& taskDescription,
     const Edit::ScopedRenderStatus srs (edit, true);
     Track::Array tracks;
 
-    for (auto bit = tracksToDo.findNextSetBit (0); bit != -1; bit = tracksToDo.findNextSetBit (bit + 1))
+    auto allTracksDebug = getAllTracks(edit); // =8>
+    std::vector<std::string> trackNames;
+    std::vector<std::string> mutedTrackNames;
+    for (auto element : allTracksDebug)
+    {
+        trackNames.push_back(element->getName().toStdString());
+        if (element->isMuted(false))
+        {
+            mutedTrackNames.push_back(element->getName().toStdString());
+        }
+    }
+
+    std::vector<std::string> trackNamesAgain;
+    for (auto bit = tracksToDo.findNextSetBit(0); bit != -1; bit = tracksToDo.findNextSetBit(bit + 1))
+    {
         tracks.add (getAllTracks (edit)[bit]);
+        trackNamesAgain.push_back(getAllTracks(edit)[bit]->getName().toStdString());
+    }
+
+    int breakpoint = 8888; // =8>
 
     // BEATCONNECT MODIFICATION
     // const FreezePointPlugin::ScopedTrackSoloIsolator isolator (edit, tracks);
@@ -434,6 +453,7 @@ bool Renderer::renderToFile (const juce::String& taskDescription,
         r.addAntiDenormalisationNoise = EditPlaybackContext::shouldAddAntiDenormalisationNoise (engine);
         r.usePlugins = usePlugins;
         r.useMasterPlugins = usePlugins;
+        // r.tracksToDo = tracks. // =8>
         r.tracksToDo = tracksToDo;
         r.allowedClips = clips;
         r.createMidiFile = outputFile.hasFileExtension (".mid");

@@ -1483,6 +1483,16 @@ void FourOscPlugin::applyToBuffer (const PluginRenderContext& fc)
 {
     juce::ScopedLock sl (voicesLock);
 
+    std::vector<std::string> debugMidiMessages;
+    bool breakFlag = false;
+    for (auto element : *fc.bufferForMidiMessages)
+    {
+        debugMidiMessages.push_back(element.getDescription().toStdString());
+        breakFlag = true;
+    }
+
+    int breakpoint = 8888; // =8> 
+
     if (fc.destBuffer != nullptr)
     {
         SCOPED_REALTIME_CHECK
