@@ -113,6 +113,13 @@ void PluginNode::prefetchBlock (juce::Range<int64_t>)
 void PluginNode::process (ProcessContext& pc)
 {
     // Can I learn the type of plugin I'm processing? // =8>
+    std::string pluginState;
+
+    auto fourOsc = dynamic_cast<FourOscPlugin*> (plugin.get());
+    if (fourOsc)
+    {
+        int breakpoint = 8888;
+    }
 
     std::vector<std::string> debugMidiMessages;
     bool breakFlag = false;

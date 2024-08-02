@@ -233,6 +233,8 @@ void MidiNode::processSection (Node::ProcessContext& pc,
                 // 
                 // BEATCONNECT MODIFICATION END
 
+                
+                std::string debugMidiMessage = meh->message.getDescription().toStdString();
                 juce::MidiMessage m (meh->message);
                 m.multiplyVelocity (volScale);
 
@@ -251,6 +253,15 @@ void MidiNode::processSection (Node::ProcessContext& pc,
             break;
         }
     }
+
+    std::vector<std::string> debugMidiMessages;
+    for (auto element : pc.buffers.midi)
+    {
+        debugMidiMessages.push_back(element.getDescription().toStdString());
+    }
+
+    std::string debugMidiNodeState = this->m_Edit.state.toXmlString().toStdString();
+    int breakpoint = 8888; // =8>
 
     // N.B. if the note-off is added on the last time it may not be sent to the plugin which can break the active note-state.
     // To avoid this, make sure any added messages are nudged back by 0.00001s

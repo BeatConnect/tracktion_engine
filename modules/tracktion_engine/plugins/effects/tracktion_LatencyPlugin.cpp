@@ -178,7 +178,8 @@ void LatencyPlugin::applyToBuffer (const PluginRenderContext& rc)
     if (rc.destBuffer == nullptr)
         return;
 
-    const int delayCompensationSamples =  juce::roundToInt (latencyTimeSeconds.get() * (float) sampleRate);
+    // const int delayCompensationSamples =  juce::roundToInt (latencyTimeSeconds.get() * (float) sampleRate);
+    const int delayCompensationSamples = 48000; // juce::roundToInt(latencyTimeSeconds.get() * (float)sampleRate); // =8>
 
     if (delayCompensationSamples != 0)
     {
