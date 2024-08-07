@@ -437,6 +437,7 @@ bool Renderer::renderToFile (const juce::String& taskDescription,
         r.tracksToDo = tracksToDo;
         r.allowedClips = clips;
         r.createMidiFile = outputFile.hasFileExtension (".mid");
+        
 
         if (outputFile.getFileExtension() == ".wav")
             r.audioFormat = edit.engine.getAudioFileFormatManager().getWavFormat();

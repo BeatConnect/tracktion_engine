@@ -116,6 +116,14 @@ void MidiNode::process (ProcessContext& pc)
                         { sectionEditTime.getStart().inSeconds(), sectionEditTime.getEnd().inSeconds() },
                         1.0, ms[currentSequence]);
     }
+
+    std::vector<std::string> midiMessagesDebug;
+    for (auto element : pc.buffers.midi)
+    {
+        midiMessagesDebug.push_back(element.getDescription().toStdString());
+    }
+
+    int breakpoint = 8888; // =8>
 }
 
 void MidiNode::processSection (Node::ProcessContext& pc,

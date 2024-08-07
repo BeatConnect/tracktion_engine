@@ -1184,6 +1184,10 @@ std::unique_ptr<tracktion::graph::Node> createNodeForAudioTrack (AudioTrack& at,
         // If there are synths on the track, create a stub Node to feed them
         for (auto plugin : at.pluginList)
         {
+            if (plugin->getPluginType().toStdString() == "4osc" || plugin->getPluginType().toStdString() == "drum machine")
+            {
+                int breakpoint = 8888; // =8>
+            }
             if (plugin->producesAudioWhenNoAudioInput())
             {
                 node = makeNode<SilentNode> (2);
@@ -1238,9 +1242,9 @@ std::unique_ptr<tracktion::graph::Node> createNodeForAudioTrack (AudioTrack& at,
 
         if (at.getMidiInputDevice().isEnabled())
             node = makeNode<SendNode> (std::move (node), getMidiInputDeviceBusID (at.itemID));
-    }
+    }    
 
-    return node;
+    return node; // what's going on here? =8>
 }
 
 //==============================================================================
@@ -1665,6 +1669,8 @@ std::unique_ptr<tracktion::graph::Node> createNodeForEdit (Edit& edit, const Cre
     std::vector<std::unique_ptr<tracktion::graph::Node>> trackNodes;
     auto params = originalParams;
     auto& playHeadState = params.processState.playHeadState;
+
+    std::string debugEdit = edit.state.toXmlString().toStdString();
     
     if (params.implicitlyIncludeSubmixChildTracks && params.allowedTracks != nullptr)
         *params.allowedTracks = addImplicitSubmixChildTracks (*params.allowedTracks);

@@ -75,6 +75,8 @@ private:
     
     std::shared_ptr<tracktion::graph::LatencyProcessor> latencyProcessor;
 
+    std::string pluginName;
+
     //==============================================================================
     void initialisePlugin (double sampleRateToUse, int blockSizeToUse);
     PluginRenderContext getPluginRenderContext (TimeRange, juce::AudioBuffer<float>&);

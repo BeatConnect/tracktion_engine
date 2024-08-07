@@ -47,6 +47,10 @@ PluginNode::PluginNode (std::unique_ptr<Node> inputNode,
     jassert (input != nullptr);
     jassert (plugin != nullptr);
     initialisePlugin (sampleRateToUse, blockSizeToUse);
+    pluginName = dynamic_cast<Plugin*>(&getPlugin())->getPluginType().toStdString();
+
+    if (pluginName == "drum machine" || pluginName == "4osc")
+        int breakpoint = 8888;
 }
 
 PluginNode::~PluginNode()

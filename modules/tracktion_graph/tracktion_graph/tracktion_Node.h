@@ -474,11 +474,21 @@ inline void Node::process (choc::buffer::FrameCount numSamples, juce::Range<int6
     
     audioView = audioView.getStart (numSamples);
 
+    std::vector<std::string> debugMidiMessagesBefore;
+    for (auto element : midiBuffer)
+        debugMidiMessagesBefore.push_back (element.getDescription().toStdString());
+
     auto destAudioView = audioView;
     ProcessContext pc { numSamples, referenceSampleRange, { destAudioView, midiBuffer } };
     process (pc);
     numSamplesProcessed.store ((int) numSamples, std::memory_order_release);
     
+    std::vector<std::string> debugMidiMessagesAfter;
+    for (auto element : midiBuffer)
+        debugMidiMessagesAfter.push_back(element.getDescription().toStdString());
+
+    int breakpoint = 8888; // =8>
+
     jassert (numChannelsBeforeProcessing == audioBuffer.getNumChannels());
     jassert (numSamplesBeforeProcessing == audioBuffer.getNumFrames());
 

@@ -101,7 +101,21 @@ struct CombiningNode::TimedNode
             add (pc.buffers.audio.getFirstChannels (numChannelsToAdd),
                  nodeOutput.audio.getFirstChannels (numChannelsToAdd));
         
+        std::vector<std::string> debugNodeOutputMidi;
+        for (auto element : nodeOutput.midi)
+            debugNodeOutputMidi.push_back(element.getDescription().toStdString());
+
+        std::vector<std::string> debugMidiMessagesBefore;
+        for (auto element : pc.buffers.midi)
+            debugMidiMessagesBefore.push_back(element.getDescription().toStdString());
+
         pc.buffers.midi.mergeFrom (nodeOutput.midi);
+
+        std::vector<std::string> debugMidiMessagesAfter;
+        for (auto element : pc.buffers.midi)
+            debugMidiMessagesAfter.push_back(element.getDescription().toStdString());
+
+        int breakpoint = 8888; // =8>
         
         hasPrefetched = false;
     }
