@@ -109,12 +109,17 @@ public:
             proxyInfo = acb.createProxyRenderingInfo();
     }
 
+    ~ProxyGeneratorJob() override
+    {
+        prepareForJobDeletion();
+    }
+
 private:
     Engine& engine;
     AudioFile original;
     std::unique_ptr<AudioClipBase::ProxyRenderingInfo> proxyInfo;
 
-    bool render()
+    bool render() override
     {
         CRASH_TRACER
 
