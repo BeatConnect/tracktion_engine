@@ -6,7 +6,6 @@
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
 */
 
-
 namespace tracktion { inline namespace engine
 {
 
@@ -404,7 +403,11 @@ public:
     {
         juce::ScopedValueSetter<bool> svs (snapAllValues, firstBlock || snapAllValues);
 
-        updateParams (numSamples);
+        if (samplesLastBlock != numSamples)
+        {
+            samplesLastBlock = numSamples;
+            updateParams (numSamples);
+        }
 
         if (firstBlock)
         {
@@ -442,7 +445,7 @@ public:
             }
         }
 
-        // Apply ADSR
+        //Apply ADSR
         ampAdsr.applyEnvelopeToBuffer (renderBuffer, 0, numSamples);
 
         // Add to output
@@ -754,6 +757,8 @@ private:
     float currentModValue[FourOscPlugin::numModSources] = {0};
 
     std::map<AutomatableParameter*, ValueSmoother<float>> smoothers;
+
+    int samplesLastBlock;
 };
 
 //==============================================================================
