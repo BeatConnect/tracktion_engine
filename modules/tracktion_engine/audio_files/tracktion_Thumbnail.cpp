@@ -922,9 +922,15 @@ bool TracktionThumbnail::getThumbnailMinMaxValues(int8_t* minValues, int8_t* max
 {
     const juce::ScopedLock sl(lock);
 
+    if (numberOfThumbSamplesPerChannelToRead == 0)
+        computeNumberOfThumbSamplesPerChannelToRead();
+
     //The length that unity assigns should match the current thumbnail state
     uint32_t curLength = numChannels * numberOfThumbSamplesPerChannelToRead;
-    if (length != curLength)
+    uint32_t curLengthInBytes = curLength * 4;
+
+    if (length != curLength &&
+        length != curLengthInBytes)
         return false;
 
     //channel interleaved implementation
