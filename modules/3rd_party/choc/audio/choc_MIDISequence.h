@@ -1,11 +1,11 @@
 //
 //    ██████ ██   ██  ██████   ██████
-//   ██      ██   ██ ██    ██ ██            ** Clean Header-Only Classes **
+//   ██      ██   ██ ██    ██ ██            ** Classy Header-Only Classes **
 //   ██      ███████ ██    ██ ██
 //   ██      ██   ██ ██    ██ ██           https://github.com/Tracktion/choc
 //    ██████ ██   ██  ██████   ██████
 //
-//   CHOC is (C)2021 Tracktion Corporation, and is offered under the terms of the ISC license:
+//   CHOC is (C)2022 Tracktion Corporation, and is offered under the terms of the ISC license:
 //
 //   Permission to use, copy, modify, and/or distribute this software for any purpose with or
 //   without fee is hereby granted, provided that the above copyright notice and this permission
@@ -26,111 +26,111 @@
 namespace choc::midi
 {
 
-/// Contains a sequence of timed MIDI events, and provides iterators for them.
-struct Sequence
-{
-    /// A time-stamped MIDI event
-    struct Event
+    /// Contains a sequence of timed MIDI events, and provides iterators for them.
+    struct Sequence
     {
-        /// The units for this time-stamp are unspecified, so you can use it for seconds,
-        /// frames, ticks, etc. as appropriate.
-        double timeStamp;
+        /// A time-stamped MIDI event
+        struct Event
+        {
+            /// The units for this time-stamp are unspecified, so you can use it for seconds,
+            /// frames, ticks, etc. as appropriate.
+            double timeStamp;
 
-        Message message;
+            LongMessage message;
 
-        bool operator< (const Event& other) const    { return timeStamp < other.timeStamp; }
+            bool operator< (const Event& other) const { return timeStamp < other.timeStamp; }
+        };
+
+        /// The raw events in the sequence. Although this vector is public to allow access,
+        /// the class expects the list to always remain sorted by time, and the timestamps
+        /// must not be negative.
+        std::vector<Event> events;
+
+        /// If you've added events to the list, you can use this method to sort it by time.
+        void sortEvents();
+
+        auto begin() const { return events.cbegin(); }
+        auto end() const { return events.cend(); }
+
+        auto begin() { return events.begin(); }
+        auto end() { return events.end(); }
+
+        /// An iterator for a choc::midi::Sequence.
+        /// Note that if the sequence is modified while any iterators are active,
+        /// their subsequent behaviour is undefined.
+        struct Iterator
+        {
+            /// Creates an iterator positioned at the start of the sequence.
+            Iterator(const Sequence&);
+            Iterator(const Iterator&) = default;
+            Iterator(Iterator&&) = default;
+
+            /// Seeks the iterator to the given time
+            void setTime(double newTime);
+
+            /// Returns the current iterator time
+            double getTime() const noexcept { return currentTime; }
+
+            /// Returns a set of events which lie between the current time, up to (but not
+            /// including) the given duration. This function then increments the iterator to
+            /// set its current time to the end of this block.
+            choc::span<const Event> readNextEvents(double blockDuration);
+
+        private:
+            const Sequence& owner;
+            double currentTime = 0;
+            size_t nextIndex = 0;
+        };
+
+        /// Returns an iterator for this sequence
+        Iterator getIterator() const { return Iterator(*this); }
     };
 
-    /// The raw events in the sequence. Although this vector is public to allow access,
-    /// the class expects the list to always remain sorted by time, and the timestamps
-    /// must not be negative.
-    std::vector<Event> events;
 
-    /// If you've added events to the list, you can use this method to sort it by time.
-    void sortEvents();
+    //==============================================================================
+    //        _        _           _  _
+    //     __| |  ___ | |_   __ _ (_)| | ___
+    //    / _` | / _ \| __| / _` || || |/ __|
+    //   | (_| ||  __/| |_ | (_| || || |\__ \ _  _  _
+    //    \__,_| \___| \__| \__,_||_||_||___/(_)(_)(_)
+    //
+    //   Code beyond this point is implementation detail...
+    //
+    //==============================================================================
 
-    auto begin() const  { return events.cbegin(); }
-    auto end() const    { return events.cend(); }
+    inline void Sequence::sortEvents() { choc::sorting::stable_sort(events.begin(), events.end()); }
 
-    auto begin()        { return events.begin(); }
-    auto end()          { return events.end(); }
+    inline Sequence::Iterator::Iterator(const Sequence& s) : owner(s) {}
 
-    /// An iterator for a choc::midi::Sequence.
-    /// Note that if the sequence is modified while any iterators are active,
-    /// their subsequent behaviour is undefined.
-    struct Iterator
+    inline void Sequence::Iterator::setTime(double newTimeStamp)
     {
-        /// Creates an iterator positioned at the start of the sequence.
-        Iterator (const Sequence&);
-        Iterator (const Iterator&) = default;
-        Iterator (Iterator&&) = default;
+        auto eventData = owner.events.data();
 
-        /// Seeks the iterator to the given time
-        void setTime (double newTime);
+        while (nextIndex != 0 && eventData[nextIndex - 1].timeStamp >= newTimeStamp)
+            --nextIndex;
 
-        /// Returns the current iterator time
-        double getTime() const noexcept             { return currentTime; }
+        while (nextIndex < owner.events.size() && eventData[nextIndex].timeStamp < newTimeStamp)
+            ++nextIndex;
 
-        /// Returns a set of events which lie between the current time, up to (but not
-        /// including) the given duration. This function then increments the iterator to
-        /// set its current time to the end of this block.
-        choc::span<const Event> readNextEvents (double blockDuration);
+        currentTime = newTimeStamp;
+    }
 
-    private:
-        const Sequence& owner;
-        double currentTime = 0;
-        size_t nextIndex = 0;
-    };
+    inline choc::span<const Sequence::Event> Sequence::Iterator::readNextEvents(double duration)
+    {
+        auto start = nextIndex;
+        auto eventData = owner.events.data();
+        auto end = start;
+        auto total = owner.events.size();
+        auto endTime = currentTime + duration;
+        currentTime = endTime;
 
-    /// Returns an iterator for this sequence
-    Iterator getIterator() const        { return Iterator (*this); }
-};
+        while (end < total && eventData[end].timeStamp < endTime)
+            ++end;
 
+        nextIndex = end;
 
-//==============================================================================
-//        _        _           _  _
-//     __| |  ___ | |_   __ _ (_)| | ___
-//    / _` | / _ \| __| / _` || || |/ __|
-//   | (_| ||  __/| |_ | (_| || || |\__ \ _  _  _
-//    \__,_| \___| \__| \__,_||_||_||___/(_)(_)(_)
-//
-//   Code beyond this point is implementation detail...
-//
-//==============================================================================
-
-inline void Sequence::sortEvents()  { choc::sorting::stable_sort (events.begin(), events.end()); }
-
-inline Sequence::Iterator::Iterator (const Sequence& s) : owner (s) {}
-
-inline void Sequence::Iterator::setTime (double newTimeStamp)
-{
-    auto eventData = owner.events.data();
-
-    while (nextIndex != 0 && eventData[nextIndex - 1].timeStamp >= newTimeStamp)
-        --nextIndex;
-
-    while (nextIndex < owner.events.size() && eventData[nextIndex].timeStamp < newTimeStamp)
-        ++nextIndex;
-
-    currentTime = newTimeStamp;
-}
-
-inline choc::span<const Sequence::Event> Sequence::Iterator::readNextEvents (double duration)
-{
-    auto start = nextIndex;
-    auto eventData = owner.events.data();
-    auto end = start;
-    auto total = owner.events.size();
-    auto endTime = currentTime + duration;
-    currentTime = endTime;
-
-    while (end < total && eventData[end].timeStamp < endTime)
-        ++end;
-
-    nextIndex = end;
-
-    return { eventData + start, eventData + end };
-}
+        return { eventData + start, eventData + end };
+    }
 
 } // namespace choc::midi
 

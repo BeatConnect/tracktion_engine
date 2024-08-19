@@ -161,11 +161,12 @@ void MidiNode::processSection (Node::ProcessContext& pc,
             clipLevel, 
             useMPEChannelMode, 
             midiSourceID,
-            controllerMessagesScratchBuffer,
+            controllerMessagesScratchBuffer //,
             // BEATCONNECT MODIFICATION START
             // Used for note animation
-            editItemID);
+            // editItemID);
             // BEATCONNECT MODIFICATION END
+                );
         shouldCreateMessagesForTime = false;
     }
 

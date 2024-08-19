@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -10,129 +10,152 @@
 
 #pragma once
 
-namespace tracktion { inline namespace engine
-{
-
-namespace MidiNodeHelpers
-{
-    inline void createMessagesForTime (MidiMessageArray& destBuffer,
-                                       juce::MidiMessageSequence& sourceSequence, double time,
-                                       juce::Range<int> channelNumbers,
-                                       LiveClipLevel& clipLevel,
-                                       bool useMPEChannelMode, MidiMessageArray::MPESourceID midiSourceID,
-                                       juce::Array<juce::MidiMessage>& controllerMessagesScratchBuffer, 
-                                       // BEATCONNECT MODIFICATION START
-                                       // Used for note animation
-                                       const EditItemID& editItemID)
-                                       // BEATCONNECT MODIFICATION END
+namespace tracktion {
+    inline namespace engine
     {
-        if (useMPEChannelMode)
+
+        namespace MidiNodeHelpers
         {
-            const int indexOfTime = sourceSequence.getNextIndexAtTime (time);
-
-            controllerMessagesScratchBuffer.clearQuick();
-
-            for (int i = channelNumbers.getStart(); i <= channelNumbers.getEnd(); ++i)
-                MPEStartTrimmer::reconstructExpression (controllerMessagesScratchBuffer, sourceSequence, indexOfTime, i);
-
-            for (auto& m : controllerMessagesScratchBuffer)
-                destBuffer.addMidiMessage (m, 0.0001, midiSourceID);
-        }
-        else
-        {
+            inline void createMessagesForTime(MidiMessageArray& destBuffer,
+                juce::MidiMessageSequence& sourceSequence, double time,
+                juce::Range<int> channelNumbers,
+                LiveClipLevel& clipLevel,
+                bool useMPEChannelMode, MidiMessageArray::MPESourceID midiSourceID,
+                juce::Array<juce::MidiMessage>& controllerMessagesScratchBuffer)
             {
-                controllerMessagesScratchBuffer.clearQuick();
-
-                for (int i = channelNumbers.getStart(); i <= channelNumbers.getEnd(); ++i)
-                    sourceSequence.createControllerUpdatesForTime (i, time, controllerMessagesScratchBuffer);
-
-                for (auto& m : controllerMessagesScratchBuffer)
-                    destBuffer.addMidiMessage (m, 0.0001, midiSourceID);
-            }
-
-            if (! clipLevel.isMute())
-            {
-                auto volScale = clipLevel.getGain();
-
-                for (int i = 0; i < sourceSequence.getNumEvents(); ++i)
+                if (useMPEChannelMode)
                 {
-                    if (auto meh = sourceSequence.getEventPointer (i))
+                    const int indexOfTime = sourceSequence.getNextIndexAtTime(time);
+
+                    controllerMessagesScratchBuffer.clearQuick();
+
+                    for (int i = channelNumbers.getStart(); i < channelNumbers.getEnd(); ++i)
+                        MPEStartTrimmer::reconstructExpression(controllerMessagesScratchBuffer, sourceSequence, indexOfTime, i);
+
+                    for (auto& m : controllerMessagesScratchBuffer)
+                        destBuffer.addMidiMessage(m, 0.0001, midiSourceID);
+                }
+                else
+                {
                     {
-                        if (meh->noteOffObject != nullptr
-                            && meh->message.isNoteOn())
+                        controllerMessagesScratchBuffer.clearQuick();
+
+                        for (int i = channelNumbers.getStart(); i < channelNumbers.getEnd(); ++i)
+                            sourceSequence.createControllerUpdatesForTime(i, time, controllerMessagesScratchBuffer);
+
+                        for (auto& m : controllerMessagesScratchBuffer)
+                            destBuffer.addMidiMessage(m, 0.0001, midiSourceID);
+                    }
+
+                    if (!clipLevel.isMute())
+                    {
+                        auto volScale = clipLevel.getGain();
+
+                        for (int i = 0; i < sourceSequence.getNumEvents(); ++i)
                         {
-                            if (meh->message.getTimeStamp() >= time)
-                                break;
-
-                            // don't play very short notes or ones that have already finished
-                            if (meh->noteOffObject->message.getTimeStamp() > time + 0.0001)
+                            if (auto meh = sourceSequence.getEventPointer(i))
                             {
-                                juce::MidiMessage m (meh->message);
-                                m.multiplyVelocity (volScale);
+                                if (meh->noteOffObject != nullptr
+                                    && meh->message.isNoteOn())
+                                {
+                                    if (meh->message.getTimeStamp() >= time)
+                                        break;
 
-                                // BEATCONNECT MODIFICATION START
-                                // Used for note animation
-                                m.setTimeInClip(0.0);
-                                m.setEditItemID((int)editItemID.getRawID());
-                                // BEATCONNECT MODIFICATION START
-                                
-                                // give these a tiny offset to make sure they're played after the controller updates
-                                destBuffer.addMidiMessage (m, 0.0001, midiSourceID);
+                                    // don't play very short notes or ones that have already finished
+                                    if (meh->noteOffObject->message.getTimeStamp() > time + 0.0001)
+                                    {
+                                        juce::MidiMessage m(meh->message);
+                                        m.multiplyVelocity(volScale);
+
+                                        // give these a tiny offset to make sure they're played after the controller updates
+                                        destBuffer.addMidiMessage(m, 0.0001, midiSourceID);
+                                    }
+                                }
                             }
                         }
                     }
                 }
             }
-        }
-    }
 
-    inline void createNoteOffs (MidiMessageArray& destination, const juce::MidiMessageSequence& sourceSequence,
-                                MidiMessageArray::MPESourceID midiSourceID,
-                                double time, double midiTimeOffset, bool isPlaying)
-    {
-        int activeChannels = 0;
-
-        for (int i = 0; i < sourceSequence.getNumEvents(); ++i)
-        {
-            if (auto meh = sourceSequence.getEventPointer (i))
+            inline void createNoteOffs(MidiMessageArray& destination, const juce::MidiMessageSequence& sourceSequence,
+                MidiMessageArray::MPESourceID midiSourceID,
+                double time, double midiTimeOffset, bool isPlaying)
             {
-                if (meh->message.isNoteOn())
-                {
-                    activeChannels |= (1 << meh->message.getChannel());
+                int activeChannels = 0;
 
-                    if (meh->message.getTimeStamp() < time
-                         && meh->noteOffObject != nullptr
-                         && meh->noteOffObject->message.getTimeStamp() >= time)
-                        destination.addMidiMessage (meh->noteOffObject->message, midiTimeOffset, midiSourceID);
+                for (int i = 0; i < sourceSequence.getNumEvents(); ++i)
+                {
+                    if (auto meh = sourceSequence.getEventPointer(i))
+                    {
+                        if (meh->message.isNoteOn())
+                        {
+                            activeChannels |= (1 << meh->message.getChannel());
+
+                            if (meh->message.getTimeStamp() < time
+                                && meh->noteOffObject != nullptr
+                                && meh->noteOffObject->message.getTimeStamp() >= time)
+                                destination.addMidiMessage(meh->noteOffObject->message, midiTimeOffset, midiSourceID);
+                        }
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                for (int i = 1; i <= 16; ++i)
+                {
+                    if ((activeChannels & (1 << i)) != 0)
+                    {
+                        destination.addMidiMessage(juce::MidiMessage::controllerEvent(i, 66 /* sustain pedal off */, 0), midiTimeOffset, midiSourceID);
+                        destination.addMidiMessage(juce::MidiMessage::controllerEvent(i, 64 /* hold pedal off */, 0), midiTimeOffset, midiSourceID);
+
+                        // NB: Some buggy plugins seem to fail to respond to note-ons if they are preceded
+                        // by an all-notes-off, so avoid this while playing.
+                        if (!isPlaying)
+                            destination.addMidiMessage(juce::MidiMessage::allNotesOff(i), midiTimeOffset, midiSourceID);
+                    }
                 }
             }
-            else
+
+            /** Asserts if any MIDI messages are timestamped outside the given range. */
+            inline void sanityCheckMidiBuffer(const MidiMessageArray& midi, double maxTimeStamp)
             {
-                break;
+                for (const auto& m : midi)
+                    jassertquiet(m.getTimeStamp() < maxTimeStamp);
+            }
+
+            inline void createNoteOffs(ActiveNoteList& activeNoteList,
+                MidiMessageArray& destination,
+                MidiMessageArray::MPESourceID midiSourceID,
+                double midiTimeOffset, bool isPlaying)
+            {
+                int activeChannels = 0;
+
+                // First send note-off events for currently playing notes
+                activeNoteList.iterate([&](int channel, int noteNumber)
+                    {
+                        activeChannels |= (1 << channel);
+                        destination.addMidiMessage(juce::MidiMessage::noteOff(channel, noteNumber), midiTimeOffset, midiSourceID);
+                    });
+                activeNoteList.reset();
+
+                // Send controller off events for used channels
+                for (int i = 1; i <= 16; ++i)
+                {
+                    if ((activeChannels & (1 << i)) != 0)
+                    {
+                        destination.addMidiMessage(juce::MidiMessage::controllerEvent(i, 66 /* sustain pedal off */, 0), midiTimeOffset, midiSourceID);
+                        destination.addMidiMessage(juce::MidiMessage::controllerEvent(i, 64 /* hold pedal off */, 0), midiTimeOffset, midiSourceID);
+
+                        // NB: Some buggy plugins seem to fail to respond to note-ons if they are preceded
+                        // by an all-notes-off, so avoid this while playing.
+                        if (!isPlaying)
+                            destination.addMidiMessage(juce::MidiMessage::allNotesOff(i), midiTimeOffset, midiSourceID);
+                    }
+                }
             }
         }
 
-        for (int i = 1; i <= 16; ++i)
-        {
-            if ((activeChannels & (1 << i)) != 0)
-            {
-                destination.addMidiMessage (juce::MidiMessage::controllerEvent (i, 66 /* sustain pedal off */, 0), midiTimeOffset, midiSourceID);
-                destination.addMidiMessage (juce::MidiMessage::controllerEvent (i, 64 /* hold pedal off */, 0), midiTimeOffset, midiSourceID);
-
-                // NB: Some buggy plugins seem to fail to respond to note-ons if they are preceded
-                // by an all-notes-off, so avoid this while playing.
-                if (! isPlaying)
-                    destination.addMidiMessage (juce::MidiMessage::allNotesOff (i), midiTimeOffset, midiSourceID);
-            }
-        }
     }
-
-    /** Asserts if any MIDI messages are timestamped outside the given range. */
-    inline void sanityCheckMidiBuffer (const MidiMessageArray& midi, double maxTimeStamp)
-    {
-        for (const auto& m : midi)
-            jassertquiet (m.getTimeStamp() < maxTimeStamp);
-    }
-}
-
-}} // namespace tracktion { inline namespace engine
+} // namespace tracktion { inline namespace engine
