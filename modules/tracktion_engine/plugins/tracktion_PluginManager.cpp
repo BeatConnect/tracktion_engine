@@ -419,7 +419,7 @@ void PluginManager::initialise()
     // createBuiltInType<PitchShiftPlugin>(); // BEATCONNECT MODIFICATION
     createBuiltInType<LowPassPlugin>();
     createBuiltInType<SamplerPlugin>();
-    createBuiltInType<FourOscPlugin>();
+    // createBuiltInType<FourOscPlugin>(); // =8>
     createBuiltInType<MidiModifierPlugin>();
     createBuiltInType<MidiPatchBayPlugin>();
     createBuiltInType<PatchBayPlugin>();
