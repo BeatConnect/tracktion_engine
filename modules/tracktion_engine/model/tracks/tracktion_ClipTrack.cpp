@@ -560,6 +560,11 @@ Clip* ClipTrack::insertClipWithState (juce::ValueTree clipState)
                 if (loopInfo.getRootNote() != -1)
                     clipState.setProperty (IDs::autoPitch, true, nullptr);
 
+#ifdef DEBUG
+                // clipState.setProperty(IDs::oneShot, true, nullptr); // =8>
+                // loopInfo.state.setProperty(IDs::oneShot, true, nullptr); // =8>
+#endif // DEBUG
+
                 if (loopInfo.isLoopable())
                 {
                     clipState.setProperty (IDs::autoTempo, true, nullptr);
