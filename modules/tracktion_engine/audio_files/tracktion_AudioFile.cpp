@@ -537,7 +537,10 @@ void SmartThumbnail::releaseFile()
 void SmartThumbnail::addNotificationRecipient(NotificationRecipient* p_Recipient)
 {
     jassert(p_Recipient != nullptr);
-    m_NotificationRecipients.push_back(p_Recipient);
+    m_NotificationRecipients.insert(p_Recipient);
+
+    // Force a repaint. Could add it as an option.
+    p_Recipient->thumbnailRepaint();
 }
 
 void SmartThumbnail::removeNotificationRecipient(NotificationRecipient* p_Recipient)

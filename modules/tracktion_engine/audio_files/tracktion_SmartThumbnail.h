@@ -79,7 +79,8 @@ private:
     //==============================================================================
 
     // BEATCONNECT MODIFICATION START
-    std::vector<NotificationRecipient*> m_NotificationRecipients;
+    // std::vector<NotificationRecipient*> m_NotificationRecipients;
+    std::set<NotificationRecipient*> m_NotificationRecipients;
     // BEATCONNECT MODIFICATION END
 
     juce::Component& component;
