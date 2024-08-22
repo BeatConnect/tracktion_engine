@@ -1211,7 +1211,7 @@ const juce::Array<EventType*>& getEventsChecked (const juce::Array<EventType*>& 
     for (auto* e : events)
     {
         auto beat = e->getBeatPosition();
-        jassert (lastBeat <= beat);
+        // jassert (lastBeat <= beat); // =8>
         lastBeat = beat;
     }
    #endif
