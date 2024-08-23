@@ -240,12 +240,6 @@ AudioClipBase::AudioClipBase (const juce::ValueTree& v, EditItemID id, Type t, C
 
     timeStretchMode = TimeStretcher::checkModeIsAvailable (timeStretchMode);
 
-#ifdef DEBUG
-    std::string debugValueTree = v.toXmlString().toStdString(); // =8>
-    std::string stateDebug = state.toXmlString().toStdString();
-    int breakpoint = 8888; // =8>
-#endif // DEBUG
-
     autoPitch.referTo (state, IDs::autoPitch, um);
     autoPitchMode.referTo (state, IDs::autoPitchMode, um);
     autoTempo.referTo (state, IDs::autoTempo, um);

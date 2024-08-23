@@ -512,10 +512,6 @@ void ClipTrack::removeCollectionClip (CollectionClip* cc)
 static void updateClipState (juce::ValueTree& state, const juce::String& name,
                              EditItemID itemID, ClipPosition position)
 {
-    std::string debugValueTree = state.toXmlString().toStdString(); // =8>
-    auto test = position.getLength().inSeconds();
-    int breakpoint = 8888; // =8>
-
     addValueTreeProperties (state,
                             IDs::name, name,
                             IDs::start, position.getStart().inSeconds(),
@@ -559,11 +555,6 @@ Clip* ClipTrack::insertClipWithState (juce::ValueTree clipState)
 
                 if (loopInfo.getRootNote() != -1)
                     clipState.setProperty (IDs::autoPitch, true, nullptr);
-
-#ifdef DEBUG
-                // clipState.setProperty(IDs::oneShot, true, nullptr); // =8>
-                // loopInfo.state.setProperty(IDs::oneShot, true, nullptr); // =8>
-#endif // DEBUG
 
                 if (loopInfo.isLoopable())
                 {
@@ -706,13 +697,6 @@ WaveAudioClip::Ptr ClipTrack::insertWaveClip (const juce::String& name, const ju
         auto newState = createNewClipState (name, TrackItem::Type::wave, edit.createNewItemID(), position);
         const bool useRelativePath = edit.filePathResolver && edit.editFileRetriever && edit.editFileRetriever().existsAsFile();
         newState.setProperty (IDs::source, SourceFileReference::findPathFromFile (edit, sourceFile, useRelativePath), nullptr);
-
-#ifdef DEBUG
-        std::string debugValueTree = newState.toXmlString().toStdString(); // =8>
-        int breakpoint = 8888; // =8>
-
-#endif // DEBUG
-
 
         if (auto c = insertClipWithState (newState, name, TrackItem::Type::wave, position, deleteExistingClips, false))
         {
