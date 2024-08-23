@@ -430,7 +430,7 @@ void LoopInfo::init (const juce::AudioFormatReader* afr, const juce::AudioFormat
     initialiseMissingProps();
 
     // BEATCONNECT MODIFICATION START
-    //setProp(IDs::oneShot, true);
+    setProp(IDs::oneShot, true);
     // BEATCONNECT MODIFICATION END
 }
 
