@@ -430,6 +430,12 @@ void LoopInfo::init (const juce::AudioFormatReader* afr, const juce::AudioFormat
     initialiseMissingProps();
 
     // BEATCONNECT MODIFICATION START
+    /* NOTE
+    This change is to allow clips to ignore ACID and tempo information when now when imported,
+    fixing issues where the thumbnail length would not match the clip length
+    Its possible there is an alternative approach to this problem
+    See ticket: https://github.com/BeatConnect/tracktion_engine/pull/65
+    */
     setProp(IDs::oneShot, true);
     // BEATCONNECT MODIFICATION END
 }
