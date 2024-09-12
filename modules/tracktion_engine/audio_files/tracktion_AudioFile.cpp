@@ -589,12 +589,6 @@ void SmartThumbnail::audioFileChanged()
     CRASH_TRACER
     auto& proxyGen = engine.getAudioFileManager().proxyGenerator;
 
-    // TEST
-    // BEATCONNECT MODIFICATION START
-    assert(file.isValid());
-    // BEATCONNECT MODIFICATION END
-    // TEST
-
     wasGeneratingProxy = proxyGen.isProxyBeingGenerated (file);
 
     releaseResources();
