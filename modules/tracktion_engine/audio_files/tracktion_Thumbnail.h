@@ -60,6 +60,7 @@ public:
     // BEATCONNECT MODIFICATION START
     void getPacketDetails(float& startTime, float& endTime, int& sizeInBytes, int& numberOfThumbSamplesPerChannel);
     bool getThumbnailMinMaxValues(int8_t* minValues, int8_t* maxValues, uint32_t length);
+    bool getThumbnailMinMaxValuesWithResolution(float* minValues, float* maxValues, uint32_t length, int resolution, bool forceDisplaySingleChannel);
     // Returns and sets numberOfThumbSamplesPerChannelToRead from all channels
     int getNumberOfTotalThumbSamples();
     void computeNumberOfThumbSamplesPerChannelToRead();
@@ -88,6 +89,7 @@ private:
     // BEATCONNECT MODIFICATION START
     int numberOfThumbSamplesPerChannelToRead = 0;
     int startThumbSampleIndex = 0;
+    const int  remapThreshold = 127;
     // BEATCONNECT MODIFICATION END
 
     bool setDataSource (LevelDataSource*);
