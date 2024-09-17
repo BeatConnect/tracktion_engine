@@ -67,6 +67,7 @@ public:
     };
     void addNotificationRecipient(NotificationRecipient* p_Recipient);
     void removeNotificationRecipient(NotificationRecipient* p_Recipient);
+    int getNotificationRecipientCount();
     void notifyAllRecipient();
     // BEATCONNECT MODIFICATION END
 
