@@ -556,6 +556,11 @@ void SmartThumbnail::removeNotificationRecipient(NotificationRecipient* p_Recipi
     }
 }
 
+int SmartThumbnail::getNotificationRecipientCount()
+{
+    return m_NotificationRecipients.size();
+}
+
 void SmartThumbnail::notifyAllRecipient()
 {
     if (m_NotificationRecipients.empty())
