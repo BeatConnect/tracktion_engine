@@ -34,8 +34,10 @@ struct PluginScanMasterProcess  : private juce::ChildProcessCoordinator
 
         crashed = false;
         // don't get stdout or strerr from the child process. We don't do anything with it and it fills up the pipe and hangs
-        launched = launchWorkerProcess (juce::File::getSpecialLocation (juce::File::currentExecutableFile),
-                                        commandLineUID, 0, 0);
+        launched = launchWorkerProcess (juce::File::getSpecialLocation (juce::File::currentExecutableFile), commandLineUID, 0, 0);
+
+        juce::File test("C:\\Users\\Work\\source\\repos\\bc_unity_daw\\PluginScan\\Builds\\VisualStudio2019\\x64\\Debug\\App\\PluginScan.exe");
+        launched = launchWorkerProcess(test, commandLineUID, 0, 0);
 
         if (launched)
         {
