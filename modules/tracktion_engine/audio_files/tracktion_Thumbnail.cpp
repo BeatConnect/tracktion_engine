@@ -922,9 +922,15 @@ bool TracktionThumbnail::getThumbnailMinMaxValues(int8_t* minValues, int8_t* max
 {
     const juce::ScopedLock sl(lock);
 
+    if (numberOfThumbSamplesPerChannelToRead == 0)
+        computeNumberOfThumbSamplesPerChannelToRead();
+
     //The length that unity assigns should match the current thumbnail state
     uint32_t curLength = numChannels * numberOfThumbSamplesPerChannelToRead;
-    if (length != curLength)
+    uint32_t curLengthInBytes = curLength * 4;
+
+    if (length != curLength &&
+        length != curLengthInBytes)
         return false;
 
     //channel interleaved implementation
@@ -940,6 +946,55 @@ bool TracktionThumbnail::getThumbnailMinMaxValues(int8_t* minValues, int8_t* max
         }
 
         j += numChannels;
+    }
+
+    return true;
+}
+
+bool TracktionThumbnail::getThumbnailMinMaxValuesWithResolution(float* minValues, float* maxValues, uint32_t length, int resolution, bool forceDisplaySingleChannel)
+{
+    const juce::ScopedLock sl(lock);
+
+    if (numberOfThumbSamplesPerChannelToRead == 0)
+        computeNumberOfThumbSamplesPerChannelToRead();
+
+    uint32_t curLength = numChannels * numberOfThumbSamplesPerChannelToRead;
+    uint32_t curLengthInBytes = curLength * 4;
+
+    if (length != curLength && length != curLengthInBytes)
+        return false;
+
+    float remapMin = -remapThreshold, remapMax = remapThreshold;
+    float remapToMin = 0, remapToMax = 1.0f;
+    int outputIndex = 0;
+
+    float currentMin = std::numeric_limits<float>::max();
+    float currentMax = std::numeric_limits<float>::lowest();
+
+    for (int i = 0; i < numberOfThumbSamplesPerChannelToRead; i += resolution)
+    {
+        for (int ch = 0; ch < numChannels; ++ch)
+        {
+            auto minMaxValuesPtr = channels[ch]->getData(startThumbSampleIndex);
+
+            float minValue = minMaxValuesPtr[i].getMinValue();
+            float maxValue = minMaxValuesPtr[i].getMaxValue();
+
+            if (forceDisplaySingleChannel && numChannels == 2)
+            {
+                float nextMinValue = (i + 1 < numberOfThumbSamplesPerChannelToRead) ? minMaxValuesPtr[i + 1].getMinValue() : minValue;
+                float nextMaxValue = (i + 1 < numberOfThumbSamplesPerChannelToRead) ? minMaxValuesPtr[i + 1].getMaxValue() : maxValue;
+
+                minValue = (minValue + nextMinValue) / 2;
+                maxValue = (maxValue + nextMaxValue) / 2;
+            }
+
+            // Remap min and max values to the desired range [0, 1]
+            minValues[outputIndex] = (minValue - remapMin) / (remapMax - remapMin) * (remapToMax - remapToMin) + remapToMin;
+            maxValues[outputIndex] = (maxValue - remapMin) / (remapMax - remapMin) * (remapToMax - remapToMin) + remapToMin;
+
+            outputIndex++; // Increment output index for each channel
+        }
     }
 
     return true;

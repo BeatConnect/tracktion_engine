@@ -49,6 +49,7 @@ public:
     void getPluginStateFromTree (juce::MemoryBlock&);
     // BEATCONNECT MODIFICATION START
     juce::String getUniqueId() override     { return uniqueId; }
+    bool getLoadedButMissingInstance()      { return loadedButMissingInstance; }
     // BEATCONNECT MODIFICATION END
 
     void updateFromMirroredPluginIfNeeded (Plugin&) override;
@@ -156,6 +157,11 @@ private:
     std::unique_ptr<PluginPlayHead> playhead;
 
     bool fullyInitialised = false, supportsMPE = false, isFlushingLayoutToState = false;
+    // BEATCONNECT MODIFICATION START
+    // This tracks whether a plugin was loaded by player 1 that player 2 does not have
+    // and the flag is needed in order to perform a refresh
+    bool loadedButMissingInstance = false;
+    // BEATCONNECT MODIFICATION END
 
     struct MPEChannelRemapper;
     std::unique_ptr<MPEChannelRemapper> mpeRemapper;

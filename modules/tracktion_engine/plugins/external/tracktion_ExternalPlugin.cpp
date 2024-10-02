@@ -583,6 +583,10 @@ void ExternalPlugin::initialiseFully()
         restorePluginStateFromValueTree (state);
         buildParameterList();
         restoreChannelLayout (*this);
+
+        // BEATCONNECT MODIFICATION START
+        loadedButMissingInstance = findMatchingPlugin() == nullptr;
+        // BEATCONNECT MODIFICATION END
     }
 }
 
@@ -605,6 +609,11 @@ void ExternalPlugin::forceFullReinitialise()
 
     if (auto t = getOwnerTrack())
         t->refreshCurrentAutoParam();
+
+    // BEATCONNECT MODIFICATION START
+    if (!loadedButMissingInstance)
+        loadedButMissingInstance = false;
+    // BEATCONNECT MODIFICATION END
 }
 
 void ExternalPlugin::updateDebugName()

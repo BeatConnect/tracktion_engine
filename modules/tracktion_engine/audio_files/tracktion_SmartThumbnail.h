@@ -58,6 +58,19 @@ public:
     /** @internal */
     void releaseFile();
 
+    // BEATCONNECT MODIFICATION START
+    class NotificationRecipient
+    {
+    public:
+
+        virtual void thumbnailRepaint() = 0;
+    };
+    void addNotificationRecipient(NotificationRecipient* p_Recipient);
+    void removeNotificationRecipient(NotificationRecipient* p_Recipient);
+    int getNotificationRecipientCount();
+    void notifyAllRecipient();
+    // BEATCONNECT MODIFICATION END
+
     //==============================================================================
     AudioFile file;
     Engine& engine;
@@ -65,6 +78,12 @@ public:
 
 private:
     //==============================================================================
+
+    // BEATCONNECT MODIFICATION START
+    // std::vector<NotificationRecipient*> m_NotificationRecipients;
+    std::set<NotificationRecipient*> m_NotificationRecipients;
+    // BEATCONNECT MODIFICATION END
+
     juce::Component& component;
     bool wasGeneratingProxy = false;
     std::atomic<bool> thumbnailIsInvalid { true };

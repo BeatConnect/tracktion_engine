@@ -514,7 +514,11 @@ void SmartThumbnail::setNewFile (const AudioFile& newFile)
         file = newFile;
 
         audioFileChanged();
-        component.repaint();
+
+        // BEATCONNECT MODIFICATION START
+        // component.repaint();
+        notifyAllRecipient();
+        // BEATCONNECT MODIFICATION END
     }
 }
 
@@ -528,6 +532,46 @@ void SmartThumbnail::releaseFile()
                                              startTimer (400);
                                      });
 }
+
+// BEATCONNECT MODIFICATION START
+void SmartThumbnail::addNotificationRecipient(NotificationRecipient* p_Recipient)
+{
+    jassert(p_Recipient != nullptr);
+    m_NotificationRecipients.insert(p_Recipient);
+
+    // Force a repaint. Could add it as an option.
+    p_Recipient->thumbnailRepaint();
+}
+
+void SmartThumbnail::removeNotificationRecipient(NotificationRecipient* p_Recipient)
+{
+    jassert(p_Recipient != nullptr);
+    for (auto it = m_NotificationRecipients.begin(); it != m_NotificationRecipients.end(); it++)
+    {
+        if (*it == p_Recipient)
+        {
+            m_NotificationRecipients.erase(it);
+            break;
+        }
+    }
+}
+
+int SmartThumbnail::getNotificationRecipientCount()
+{
+    return m_NotificationRecipients.size();
+}
+
+void SmartThumbnail::notifyAllRecipient()
+{
+    if (m_NotificationRecipients.empty())
+        component.repaint();
+    else
+    {
+        for (auto recipient : m_NotificationRecipients)
+            recipient->thumbnailRepaint();
+    }
+}
+// BEATCONNECT MODIFICATION END
 
 void SmartThumbnail::createThumbnailReader()
 {
@@ -560,7 +604,12 @@ void SmartThumbnail::audioFileChanged()
         thumbnailIsInvalid = true;
 
     lastProgress = 0.0f;
-    component.repaint();
+
+    // BEATCONNECT MODIFICATION START
+    // component.repaint();
+    notifyAllRecipient();
+    // BEATCONNECT MODIFICATION END
+
     startTimer (200);
 }
 
@@ -590,7 +639,10 @@ void SmartThumbnail::timerCallback()
             thumbnailIsInvalid = true;
         }
 
-        component.repaint();
+        // BEATCONNECT MODIFICATION START
+        // component.repaint();
+        notifyAllRecipient();
+        // BEATCONNECT MODIFICATION END
     }
 
     if (isGeneratingNow || ! isFullyLoaded())
@@ -601,12 +653,20 @@ void SmartThumbnail::timerCallback()
         if (lastProgress != progress)
         {
             lastProgress = progress;
-            component.repaint();
+
+            // BEATCONNECT MODIFICATION START
+            // component.repaint();
+            notifyAllRecipient();
+            // BEATCONNECT MODIFICATION END
         }
     }
     else if (! thumbnailIsInvalid || ! file.getFile().exists())
     {
-        component.repaint();
+        // BEATCONNECT MODIFICATION START
+        // component.repaint();
+        notifyAllRecipient();
+        // BEATCONNECT MODIFICATION END
+
         stopTimer();
     }
 }
