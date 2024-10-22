@@ -27,6 +27,8 @@
 
 #pragma once
 
+#define STANDALONE_PLUGIN_DEVELOPMENT_ENVIRONMENT
+
 #include "common/Utilities.h"
 
 using namespace tracktion::literals;
@@ -94,6 +96,7 @@ struct DemoTypeBase
 //==============================================================================
 // Include demo files to register them
 // #include "demos/AbletonLinkDemo.h"
+#include "demos/AdditiveSynthesiserPluginDemo.h"
 #include "demos/DistortionEffectDemo.h"
 #include "demos/IRPluginDemo.h"
 #include "demos/MidiRecordingDemo.h"

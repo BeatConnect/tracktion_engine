@@ -30,3 +30,4 @@ const juce::File& TemporaryFileManager::getTempDirectory() const
 }
 ```
 
+Eg. `C:\Users\Liam\AppData\Roaming\DemoRunner`
