@@ -37,9 +37,7 @@ struct PluginScanMasterProcess  : private juce::ChildProcessCoordinator
         // don't get stdout or strerr from the child process. We don't do anything with it and it fills up the pipe and hangs
 
         // BEATCONNECT MODIFICATION START
-        juce::File curDir(juce::File::getCurrentWorkingDirectory());
-        const juce::String fullPath = curDir.getFullPathName() + "\\PluginScan.exe";
-        juce::File fullPathToPluginScan(fullPath);
+        juce::File fullPathToPluginScan = engine.getEngineBehaviour().getPluginScanPath();
         if(fullPathToPluginScan.existsAsFile())
             launched = launchWorkerProcess(fullPathToPluginScan, commandLineUID, 0, 0);
         else

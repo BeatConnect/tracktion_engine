@@ -231,6 +231,11 @@ public:
     /** Return the control surfaces you want enabled in the engine */
     
     virtual ControlSurfaces getDesiredControlSurfaces()                             { return {}; }
+
+    // BEATCONNECT MODIFICATION START
+    // See override in ExtendedEngineBehaviour.h
+    virtual juce::File getPluginScanPath() { return {}; }
+    // BEATCONNECT MODIFICATION END
 };
 
 }} // namespace tracktion { inline namespace engine
