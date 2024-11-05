@@ -158,7 +158,7 @@ juce::Array<ClipEffect*> getAllClipEffects (Edit& edit);
 MidiNote* findNoteForState (const Edit&, const juce::ValueTree&);
 
 /** Merges a set of MIDI clips in to one new one. */
-juce::Result mergeMidiClips (juce::Array<MidiClip*>);
+juce::Result mergeMidiClips (juce::Array<MidiClip*>, juce::ValueTree&);
 
 
 //==============================================================================
