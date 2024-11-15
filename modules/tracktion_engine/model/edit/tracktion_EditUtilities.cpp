@@ -679,7 +679,10 @@ MidiNote* findNoteForState (const Edit& edit, const juce::ValueTree& v)
     return result;
 }
 
-juce::Result mergeMidiClips (juce::Array<MidiClip*> clips)
+// BEATCONNECT MODIFICATION START
+// juce::Result mergeMidiClips(juce::Array<MidiClip*> clips)
+juce::Result mergeMidiClips (juce::Array<MidiClip*> clips, juce::ValueTree& mergedClip)
+// BEATCONNECT MODIFICATION END
 {
     for (auto c : clips)
         if (c->getClipTrack() == nullptr || c->getClipTrack()->isFrozen (Track::anyFreeze))
@@ -726,6 +729,10 @@ juce::Result mergeMidiClips (juce::Array<MidiClip*> clips)
 
                 newClip->setPosition ({ { startTime, endTime }, TimeDuration() });
                 newClip->getSequence().addFrom (destinationList, &track->edit.getUndoManager());
+
+                // BEATCONNECT MODIFICATION START
+                mergedClip = newClip->state;
+                // BEATCONNECT MODIFICATION END
 
                 for (int i = clips.size(); --i >= 0;)
                     clips.getUnchecked (i)->removeFromParentTrack();
