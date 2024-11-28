@@ -149,15 +149,14 @@ public:
     static juce::File renderToFile (const juce::String& taskDescription, const Parameters& params);
 
     /** Renders an Edit to a file within the given time range and the track indicies described by the BigInteger. */
-    static bool renderToFile (const juce::String& taskDescription,
-                              const juce::File& outputFile,
-                              Edit& edit,
-                              TimeRange range,
-                              const juce::BigInteger& tracksToDo,
-                              bool usePlugins = true,
-                              juce::Array<Clip*> clips = {},
-                              bool useThread = true);
-
+    static bool renderToFile(const juce::String& taskDescription,
+        const juce::File& outputFile,
+        Edit& edit,
+        TimeRange range,
+        const juce::BigInteger& tracksToDo,
+        bool usePlugins = true,
+        juce::Array<Clip*> clips = {},
+        bool useThread = true);
     //==============================================================================
     /** @see measureStatistics()
     */
@@ -173,6 +172,19 @@ public:
                                          Edit& edit, TimeRange range,
                                          const juce::BigInteger& tracksToDo,
                                          int blockSizeForAudio, double sampleRateForAudio = 44100.0);
+
+    /** Renders an Edit to a file within the given time range and the track indicies described by the BigInteger. */
+    static bool renderToFile(const juce::String& taskDescription,
+        const juce::File& outputFile,
+        Edit& edit,
+        TimeRange range,
+        const juce::BigInteger& tracksToDo,
+        // BEATCONNECT MODIFICATION START
+        Statistics& result,
+        // BEATCONNECT MODIFICATION END
+        bool usePlugins = true,
+        juce::Array<Clip*> clips = {},
+        bool useThread = true);
 
     //==============================================================================
     struct RenderResult

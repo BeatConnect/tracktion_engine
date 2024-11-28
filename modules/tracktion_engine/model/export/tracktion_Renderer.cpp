@@ -404,6 +404,9 @@ bool Renderer::renderToFile (const juce::String& taskDescription,
                              Edit& edit,
                              TimeRange range,
                              const juce::BigInteger& tracksToDo,
+                             // BEATCONNECT MODIFICATION START
+                             Renderer::Statistics& result,
+                             // BEATCONNECT MODIFICATION END
                              bool usePlugins,
                              juce::Array<Clip*> clips,
                              bool useThread)
@@ -411,14 +414,15 @@ bool Renderer::renderToFile (const juce::String& taskDescription,
     CRASH_TRACER
     auto& engine = edit.engine;
     const Edit::ScopedRenderStatus srs (edit, true);
-    Track::Array tracks;
 
-    for (auto bit = tracksToDo.findNextSetBit (0); bit != -1; bit = tracksToDo.findNextSetBit (bit + 1))
-        tracks.add (getAllTracks (edit)[bit]);
-
-    // BEATCONNECT MODIFICATION
-    // const FreezePointPlugin::ScopedTrackSoloIsolator isolator (edit, tracks);
-    // BEATCONNECT MODIFICATION
+    // BEATCONNECT MODIFICATION START
+    //  Track::Array tracks;
+    //  
+    //  for (auto bit = tracksToDo.findNextSetBit (0); bit != -1; bit = tracksToDo.findNextSetBit (bit + 1))
+    //      tracks.add (getAllTracks (edit)[bit]);
+    //  
+    //  const FreezePointPlugin::ScopedTrackSoloIsolator isolator (edit, tracks);
+    // BEATCONNECT MODIFICATION END
 
     TransportControl::stopAllTransports (engine, false, true);
     turnOffAllPlugins (edit);
@@ -463,10 +467,91 @@ bool Renderer::renderToFile (const juce::String& taskDescription,
                 while (task->runJob() == juce::ThreadPoolJob::jobNeedsRunningAgain)
                 {}
             }
+
+            // BEATCONNECT MODIFICATION START
+            // Used to ascertain if the render has audio. 
+            result.peak = task->params.resultMagnitude;
+            result.average = task->params.resultRMS;
+            result.audioDuration = task->params.resultAudioDuration;
+            // BEATCONNECT MODIFICATION END
         }
     }
 
     turnOffAllPlugins (edit);
+
+    return outputFile.existsAsFile();
+}
+
+bool Renderer::renderToFile(const juce::String& taskDescription,
+    const juce::File& outputFile,
+    Edit& edit,
+    TimeRange range,
+    const juce::BigInteger& tracksToDo,
+    bool usePlugins,
+    juce::Array<Clip*> clips,
+    bool useThread)
+{
+    CRASH_TRACER
+        auto& engine = edit.engine;
+    const Edit::ScopedRenderStatus srs(edit, true);
+
+    // BEATCONNECT MODIFICATION START
+    //  Track::Array tracks;
+    //  
+    //  for (auto bit = tracksToDo.findNextSetBit (0); bit != -1; bit = tracksToDo.findNextSetBit (bit + 1))
+    //      tracks.add (getAllTracks (edit)[bit]);
+    //  
+    //  const FreezePointPlugin::ScopedTrackSoloIsolator isolator (edit, tracks);
+    // BEATCONNECT MODIFICATION END
+
+    TransportControl::stopAllTransports(engine, false, true);
+    turnOffAllPlugins(edit);
+
+    if (tracksToDo.countNumberOfSetBits() > 0)
+    {
+        Parameters r(edit);
+        r.destFile = outputFile;
+        r.bitDepth = 24;
+        r.sampleRateForAudio = edit.engine.getDeviceManager().getSampleRate();
+        r.blockSizeForAudio = edit.engine.getDeviceManager().getBlockSize();
+        r.time = range;
+        r.addAntiDenormalisationNoise = EditPlaybackContext::shouldAddAntiDenormalisationNoise(engine);
+        r.usePlugins = usePlugins;
+        r.useMasterPlugins = usePlugins;
+        r.tracksToDo = tracksToDo;
+        r.allowedClips = clips;
+        r.createMidiFile = outputFile.hasFileExtension(".mid");
+
+        if (outputFile.getFileExtension() == ".wav")
+            r.audioFormat = edit.engine.getAudioFileFormatManager().getWavFormat();
+        else if (outputFile.getFileExtension() == ".flac")
+            r.audioFormat = edit.engine.getAudioFileFormatManager().getFlacFormat();
+        else if (outputFile.getFileExtension() == ".ogg")
+            r.audioFormat = edit.engine.getAudioFileFormatManager().getOggFormat();
+        else
+        {
+            jassertfalse; // File format must be one of the supported types
+            r.audioFormat = edit.engine.getAudioFileFormatManager().getWavFormat();
+        }
+
+        addAcidInfo(edit, r);
+
+        if (auto task = render_utils::createRenderTask(r, taskDescription, nullptr, nullptr))
+        {
+            if (useThread)
+            {
+                engine.getUIBehaviour().runTaskWithProgressBar(*task);
+            }
+            else
+            {
+                while (task->runJob() == juce::ThreadPoolJob::jobNeedsRunningAgain)
+                {
+                }
+            }
+        }
+    }
+
+    turnOffAllPlugins(edit);
 
     return outputFile.existsAsFile();
 }
