@@ -99,14 +99,14 @@ struct DemoTypeBase
 #include "demos/AdditiveSynthesiserPluginDemo.h"
 #include "demos/DistortionEffectDemo.h"
 #include "demos/IRPluginDemo.h"
-#include "demos/MidiRecordingDemo.h"
-// #include "demos/PatternGeneratorDemo.h"
-// #include "demos/PitchAndTimeDemo.h"
+//  #include "demos/MidiRecordingDemo.h"
+#include "demos/PatternGeneratorDemo.h"
+#include "demos/PitchAndTimeDemo.h"
 // #include "demos/PlaybackDemo.h"
 #include "demos/PluginDemo.h"
 // #include "demos/RecordingDemo.h"
-// #include "demos/StepSequencerDemo.h"
-#include "demos/DemoTemplate.h"
+#include "demos/StepSequencerDemo.h"
+// #include "demos/DemoTemplate.h"
 
 //==============================================================================
 //==============================================================================

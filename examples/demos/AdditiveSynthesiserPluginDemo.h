@@ -14,69 +14,96 @@
 #include "../common/Utilities.h"
 #include "../common/Components.h"
 
+using namespace tracktion_engine;
+
 // Include Slider Parameter binding classes and functions
 #include "DistortionEffectDemo.h"
 
 #include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_AdditiveSynthesiserPlugin.h"
-#include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_AdditiveSynthesiserPlugin.cpp"
-#include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_AdditiveSynthesiserVoice.h"
-#include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_AdditiveSynthesiserVoice.cpp"
-#include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_SineVoice.h"
-#include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_SineVoice.cpp"
-#include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_PulseVoice.h"
-#include "../../../Source/Plugin/AdditiveSynthesiserPlugin/bc_PulseVoice.cpp"
 
-class AdditiveSynthesiserPluginDemo : public Component, private ChangeListener
+class AdditiveSynthesiserPluginDemo : public Component
 {
 public:
     AdditiveSynthesiserPluginDemo(Engine& p_engine) : engine(p_engine)
     {
+        auto track = EngineHelpers::getOrInsertAudioTrackAt(edit, 0);
+        jassert(track != nullptr);
+        track->state.setProperty(te::IDs::type, "midi", nullptr);
+
         // Register our custom plugin with the engine so it can be found using PluginCache::createNewPlugin
         engine.getPluginManager().createBuiltInType<BeatConnect::AdditiveSynthesiserPlugin>();
 
-        Helpers::addAndMakeVisible(*this, { &noiseSlider, &noiseLabel });
+        // All to do with inputs
+        auto& dm = engine.getDeviceManager();
 
-        //// Load demo audio file
-        //oggTempFile = std::make_unique<TemporaryFile>(".ogg");
-        //auto demoFile = oggTempFile->getFile();
-        //demoFile.replaceWithData(PlaybackDemoAudio::guitar_loop_ogg, PlaybackDemoAudio::guitar_loop_oggSize);
+        for (int i = 0; i < dm.getNumMidiInDevices(); i++)
+        {
+            if (auto mip = dm.getMidiInDevice(i))
+            {
+                mip->setEndToEndEnabled(true);
+                mip->setEnabled(true);
+            }
+        }
 
-        //// Creates clip. Loads clip from file f
-        //// Creates track. Loads clip into track
-        auto track = EngineHelpers::getOrInsertAudioTrackAt(edit, 0);
-        jassert(track != nullptr);
+        for (int i = 0; i < dm.getNumWaveInDevices(); i++)
+        {
+            if (auto wip = dm.getWaveInDevice(i))
+                wip->setStereoPair(false);
+        }
 
-        //// Add a new clip to this track
-        //te::AudioFile audioFile(edit.engine, demoFile);
+        for (int i = 0; i < dm.getNumWaveInDevices(); i++)
+        {
+            if (auto wip = dm.getWaveInDevice(i))
+            {
+                wip->setEndToEnd(true);
+                wip->setEnabled(true);
+            }
+        }
 
-        //auto clip = track->insertWaveClip(demoFile.getFileNameWithoutExtension(), demoFile,
-        //    { { {}, tracktion::TimePosition::fromSeconds(audioFile.getLength()) }, {} }, false);
-        //jassert(clip != nullptr);
+        edit.getTransport().ensureContextAllocated();
 
-        // Creates new instance of AdditiveSynthesiserPlugin and inserts to track 1
-        auto plugin = edit.getPluginCache().createNewPlugin(BeatConnect::AdditiveSynthesiserPlugin::xmlTypeName, {});
+        // Select the MPK mini 3 as an input.
+        te::InputDeviceInstance* targetInput = nullptr;
+        for (auto instance : edit.getAllInputDevices())
+        {
+            if (instance->getInputDevice().getDeviceType() == te::InputDevice::waveDevice ||
+                instance->getInputDevice().getDeviceType() == te::InputDevice::physicalMidiDevice ||
+                instance->getInputDevice().getDeviceType() == te::InputDevice::virtualMidiDevice)
+            {
+                if (instance->getInputDevice().getName() == "MPK mini 3")
+                {
+                    targetInput = instance;
+                    break;
+                }
+            }
+        }
 
-        BeatConnect::AdditiveSynthesiserPlugin* additiveSynthesiserPlugin = dynamic_cast<BeatConnect::AdditiveSynthesiserPlugin*>(plugin.get());
-        // additiveSynthesiserPlugin->addVoice
+        // Is the MPK mini 3 plugged in?
+        if (targetInput != nullptr)
+        {
+            targetInput->setTargetTrack(*track, 0, true);
+            if(!targetInput->getInputDevice().isEndToEndEnabled())
+                targetInput->getInputDevice().flipEndToEnd();
 
-        track->pluginList.insertPlugin(plugin, 0, nullptr);
+            // Creates new instance of AdditiveSynthesiserPlugin and inserts to track 1
+            auto plugin = edit.getPluginCache().createNewPlugin(BeatConnect::AdditiveSynthesiserPlugin::xmlTypeName, {});
+            track->pluginList.insertPlugin(plugin, 0, nullptr);
 
-        //// Set the loop points to the start/end of the clip, enable looping and start playback
-        //edit.getTransport().addChangeListener(this);
-        //EngineHelpers::loopAroundClip(*clip);
-        EngineHelpers::togglePlay(edit); // =8>
-
-        // Setup button callbacks
-        playPauseButton.onClick = [this] { EngineHelpers::togglePlay(edit); };
-
-        // Setup sliders and labels
-        //auto noiseParam = plugin->getAutomatableParameterByID("noise");
-        //bindSliderToParameter(noiseSlider, *noiseParam);
-        //noiseSlider.setSkewFactorFromMidPoint(1.0);
-        //noiseLabel.attachToComponent(&noiseSlider, true);
-        //noiseLabel.setText("Noise", sendNotification);
-
-        updatePlayButtonText();
+            // Create all the slider that control the plugin parameters.
+            ValueTree paramsNode = plugin->state.getChildWithName("PluginParameters");
+            assert(paramsNode.isValid());
+            for (auto param : paramsNode)
+            {
+                const String paramId = param.getProperty(te::IDs::paramId).toString();
+                m_Sliders.push_back(std::make_unique<Slider>());
+                m_Labels.push_back(std::make_unique<Label>());
+                Helpers::addAndMakeVisible(*this, { m_Sliders.back().get(), m_Labels.back().get() });
+                auto noiseParam = plugin->getAutomatableParameterByID(paramId);
+                bindSliderToParameter(*m_Sliders.back().get(), *noiseParam);
+                m_Labels.back()->attachToComponent(m_Sliders.back().get(), true);
+                m_Labels.back()->setText(paramId, sendNotification);
+            }
+        }
 
         setSize(600, 400);
     }
@@ -88,34 +115,21 @@ public:
 
     void resized() override
     {
-        auto r = getLocalBounds();
-        auto topR = r.removeFromTop(30);
-        playPauseButton.setBounds(topR.reduced(2));
-
-        noiseSlider.setBounds(50, 50, 500, 50);
+        int i = 1;
+        for (auto& slider : m_Sliders)
+        {
+            slider->setBounds(100, 30 * i, 500, 30);
+            i++;
+        }
     }
 
 private:
+
     te::Engine& engine;
     te::Edit edit{ Edit::Options { engine, te::createEmptyEdit(engine), ProjectItemID::createNewID(0) } };
-    std::unique_ptr<TemporaryFile> oggTempFile;
 
-    TextButton playPauseButton{ "Play" };
-
-    Slider noiseSlider;
-    Label noiseLabel;
-
-    std::unique_ptr<juce::FileChooser> fileChooser;
-
-    void updatePlayButtonText()
-    {
-        playPauseButton.setButtonText(edit.getTransport().isPlaying() ? "Pause" : "Play");
-    }
-
-    void changeListenerCallback(ChangeBroadcaster*) override
-    {
-        updatePlayButtonText();
-    }
+    std::vector<std::unique_ptr<Slider>> m_Sliders;
+    std::vector<std::unique_ptr<Label>> m_Labels;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AdditiveSynthesiserPluginDemo)
 };
