@@ -89,12 +89,62 @@ public:
             auto plugin = edit.getPluginCache().createNewPlugin(BeatConnect::AdditiveSynthesiserPlugin::xmlTypeName, {});
             track->pluginList.insertPlugin(plugin, 0, nullptr);
 
+            m_BtnNoise = std::make_unique<ToggleButton>();
+            m_BtnPulse = std::make_unique<ToggleButton>();
+            m_BtnSawtooth = std::make_unique<ToggleButton>();
+            m_BtnSine = std::make_unique<ToggleButton>();
+            m_BtnTriangle = std::make_unique<ToggleButton>();
+            Helpers::addAndMakeVisible(*this, 
+                { 
+                    m_BtnNoise.get(),
+                    m_BtnPulse.get(),
+                    m_BtnSawtooth.get(),
+                    m_BtnSine.get(),
+                    m_BtnTriangle.get(),
+                });
+
+            int shift = 1;
+            m_BtnNoise->setBounds(100 * shift, 5, 200 * shift, 20);
+            m_BtnNoise->setButtonText("Noise");
+            shift++;
+            m_BtnPulse->setBounds(100 * shift, 5, 200 * shift, 20);
+            m_BtnPulse->setButtonText("Pulse");
+            shift++;
+            m_BtnSawtooth->setBounds(100 * shift, 5, 200 * shift, 20);
+            m_BtnSawtooth->setButtonText("Sawtooth");
+            shift++;
+            m_BtnSine->setBounds(100 * shift, 5, 200 * shift, 20);
+            m_BtnSine->setButtonText("Sine");
+            shift++;
+            m_BtnTriangle->setBounds(100 * shift, 5, 200 * shift, 20);
+            m_BtnTriangle->setButtonText("Triangle");
+
             // Create all the slider that control the plugin parameters.
             ValueTree paramsNode = plugin->state.getChildWithName("PluginParameters");
             assert(paramsNode.isValid());
+
+            auto voiceParam = plugin->getAutomatableParameterByID("voiceTypeNoise");
+            m_BtnNoise->getToggleStateValue().referTo(juce::Value(new ParameterValueSource(voiceParam)));
+            voiceParam = plugin->getAutomatableParameterByID("voiceTypePulse");
+            m_BtnPulse->getToggleStateValue().referTo(juce::Value(new ParameterValueSource(voiceParam)));
+            voiceParam = plugin->getAutomatableParameterByID("voiceTypeSawtooth");
+            m_BtnSawtooth->getToggleStateValue().referTo(juce::Value(new ParameterValueSource(voiceParam)));
+            voiceParam = plugin->getAutomatableParameterByID("voiceTypeSine");
+            m_BtnSine->getToggleStateValue().referTo(juce::Value(new ParameterValueSource(voiceParam)));
+            voiceParam = plugin->getAutomatableParameterByID("voiceTypeTriangle");
+            m_BtnTriangle->getToggleStateValue().referTo(juce::Value(new ParameterValueSource(voiceParam)));
+
             for (auto param : paramsNode)
             {
                 const String paramId = param.getProperty(te::IDs::paramId).toString();
+
+                if (paramId == "voiceTypeNoise" ||
+                    paramId == "voiceTypePulse" ||
+                    paramId == "voiceTypeSawtooth" ||
+                    paramId == "voiceTypeSine" ||
+                    paramId == "voiceTypeTriangle")
+                    continue;
+
                 m_Sliders.push_back(std::make_unique<Slider>());
                 m_Labels.push_back(std::make_unique<Label>());
                 Helpers::addAndMakeVisible(*this, { m_Sliders.back().get(), m_Labels.back().get() });
@@ -128,6 +178,11 @@ private:
     te::Engine& engine;
     te::Edit edit{ Edit::Options { engine, te::createEmptyEdit(engine), ProjectItemID::createNewID(0) } };
 
+    std::unique_ptr<ToggleButton> m_BtnNoise;
+    std::unique_ptr<ToggleButton> m_BtnPulse;
+    std::unique_ptr<ToggleButton> m_BtnSawtooth;
+    std::unique_ptr<ToggleButton> m_BtnSine;
+    std::unique_ptr<ToggleButton> m_BtnTriangle;
     std::vector<std::unique_ptr<Slider>> m_Sliders;
     std::vector<std::unique_ptr<Label>> m_Labels;
 

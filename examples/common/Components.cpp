@@ -13,6 +13,8 @@ using namespace std::literals;
 
 static inline const char* getInternalPluginFormatName()     { return "TracktionInternal"; }
 
+#include "../../../BeatConnectDLL/Source/Plugin/AdditiveSynthesiserPlugin/bc_AdditiveSynthesiserPlugin.h"
+
 //==============================================================================
 class PluginTreeBase
 {
@@ -174,6 +176,7 @@ void PluginTreeGroup::createBuiltInItems (int& num, te::Plugin::Type types)
     addInternalPlugin<te::AuxReturnPlugin> (*this, num);
     addInternalPlugin<te::TextPlugin> (*this, num);
     addInternalPlugin<te::FreezePointPlugin> (*this, num);
+    addInternalPlugin<BeatConnect::AdditiveSynthesiserPlugin>(*this, num);
 
    #if TRACKTION_ENABLE_REWIRE
     addInternalPlugin<te::ReWirePlugin> (*this, num, true);

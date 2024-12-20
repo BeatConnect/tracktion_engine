@@ -23,6 +23,9 @@ public:
     PluginDemo (te::Engine& e)
         : engine (e)
     {
+        // Register our custom plugin with the engine so it can be found using PluginCache::createNewPlugin
+        engine.getPluginManager().createBuiltInType<BeatConnect::AdditiveSynthesiserPlugin>();
+
         newEditButton.onClick = [this] { createOrLoadEdit(); };
         
         updatePlayButtonText();
