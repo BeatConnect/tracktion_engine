@@ -134,6 +134,17 @@ public:
             voiceParam = plugin->getAutomatableParameterByID("voiceTypeTriangle");
             m_BtnTriangle->getToggleStateValue().referTo(juce::Value(new ParameterValueSource(voiceParam)));
 
+            auto lambdaInsertSlider = [this](const String& p_ParamID, te::Plugin::Ptr p_Plugin)
+            {
+                m_Sliders.push_back(std::make_unique<Slider>());
+                m_Labels.push_back(std::make_unique<Label>());
+                Helpers::addAndMakeVisible(*this, { m_Sliders.back().get(), m_Labels.back().get() });
+                auto noiseParam = p_Plugin->getAutomatableParameterByID(p_ParamID);
+                bindSliderToParameter(*m_Sliders.back().get(), *noiseParam);
+                m_Labels.back()->attachToComponent(m_Sliders.back().get(), true);
+                m_Labels.back()->setText(p_ParamID, sendNotification);
+            };
+
             for (auto param : paramsNode)
             {
                 const String paramId = param.getProperty(te::IDs::paramId).toString();
@@ -145,13 +156,7 @@ public:
                     paramId == "voiceTypeTriangle")
                     continue;
 
-                m_Sliders.push_back(std::make_unique<Slider>());
-                m_Labels.push_back(std::make_unique<Label>());
-                Helpers::addAndMakeVisible(*this, { m_Sliders.back().get(), m_Labels.back().get() });
-                auto noiseParam = plugin->getAutomatableParameterByID(paramId);
-                bindSliderToParameter(*m_Sliders.back().get(), *noiseParam);
-                m_Labels.back()->attachToComponent(m_Sliders.back().get(), true);
-                m_Labels.back()->setText(paramId, sendNotification);
+                lambdaInsertSlider(paramId, plugin);
             }
         }
 
