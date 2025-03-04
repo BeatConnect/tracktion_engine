@@ -516,7 +516,6 @@ void SmartThumbnail::setNewFile (const AudioFile& newFile)
         audioFileChanged();
 
         // BEATCONNECT MODIFICATION START
-        // component.repaint();
         notifyAllRecipient();
         // BEATCONNECT MODIFICATION END
     }
@@ -563,11 +562,9 @@ int SmartThumbnail::getNotificationRecipientCount()
 
 void SmartThumbnail::notifyAllRecipient()
 {
-    if (m_NotificationRecipients.empty())
-        component.repaint();
-    else
+    for (auto recipient : m_NotificationRecipients)
     {
-        for (auto recipient : m_NotificationRecipients)
+        if(recipient != nullptr)
             recipient->thumbnailRepaint();
     }
 }
@@ -606,7 +603,6 @@ void SmartThumbnail::audioFileChanged()
     lastProgress = 0.0f;
 
     // BEATCONNECT MODIFICATION START
-    // component.repaint();
     notifyAllRecipient();
     // BEATCONNECT MODIFICATION END
 
@@ -640,7 +636,6 @@ void SmartThumbnail::timerCallback()
         }
 
         // BEATCONNECT MODIFICATION START
-        // component.repaint();
         notifyAllRecipient();
         // BEATCONNECT MODIFICATION END
     }
@@ -655,7 +650,6 @@ void SmartThumbnail::timerCallback()
             lastProgress = progress;
 
             // BEATCONNECT MODIFICATION START
-            // component.repaint();
             notifyAllRecipient();
             // BEATCONNECT MODIFICATION END
         }
@@ -663,7 +657,6 @@ void SmartThumbnail::timerCallback()
     else if (! thumbnailIsInvalid || ! file.getFile().exists())
     {
         // BEATCONNECT MODIFICATION START
-        // component.repaint();
         notifyAllRecipient();
         // BEATCONNECT MODIFICATION END
 
