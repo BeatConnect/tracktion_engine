@@ -24,17 +24,17 @@ namespace Helpers
     {
         return stringToTest.isEmpty() ? stringToReturnIfEmpty : stringToTest;
     }
-    
+
     static inline File findRecentEdit (const File& dir)
     {
         auto files = dir.findChildFiles (File::findFiles, false, "*.tracktionedit");
-        
+
         if (files.size() > 0)
         {
             files.sort();
             return files.getLast();
         }
-        
+
         return {};
     }
 }
@@ -138,9 +138,9 @@ namespace EngineHelpers
         auto clips = track.getClips();
 
         for (int i = clips.size(); --i >= 0;)
-            clips.getUnchecked (i)->removeFromParentTrack();
+            clips.getUnchecked (i)->removeFromParent();
     }
-    
+
     inline te::AudioTrack* getOrInsertAudioTrackAt (te::Edit& edit, int index)
     {
         edit.ensureNumberOfAudioTracks (index + 1);
@@ -178,72 +178,87 @@ namespace EngineHelpers
         return clip;
     }
 
-    inline void togglePlay (te::Edit& edit)
+    enum class ReturnToStart { no, yes };
+
+    inline void togglePlay (te::Edit& edit, ReturnToStart rts = ReturnToStart::no)
     {
         auto& transport = edit.getTransport();
 
         if (transport.isPlaying())
             transport.stop (false, false);
         else
-            transport.play (false);
+        {
+            if (rts == ReturnToStart::yes)
+                transport.playFromStart (true);
+            else
+                transport.play (false);
+        }
     }
-    
+
     inline void toggleRecord (te::Edit& edit)
     {
         auto& transport = edit.getTransport();
-        
+
         if (transport.isRecording())
             transport.stop (true, false);
         else
             transport.record (false);
     }
-    
+
     inline void armTrack (te::AudioTrack& t, bool arm, int position = 0)
     {
         auto& edit = t.edit;
         for (auto instance : edit.getAllInputDevices())
-            if (instance->isOnTargetTrack (t, position))
-                instance->setRecordingEnabled (t, arm);
+            if (te::isOnTargetTrack (*instance, t, position))
+                instance->setRecordingEnabled (t.itemID, arm);
     }
-    
+
     inline bool isTrackArmed (te::AudioTrack& t, int position = 0)
     {
         auto& edit = t.edit;
         for (auto instance : edit.getAllInputDevices())
-            if (instance->isOnTargetTrack (t, position))
-                return instance->isRecordingEnabled (t);
-        
+            if (te::isOnTargetTrack (*instance, t, position))
+                return instance->isRecordingEnabled (t.itemID);
+
         return false;
     }
-    
+
     inline bool isInputMonitoringEnabled (te::AudioTrack& t, int position = 0)
     {
-        auto& edit = t.edit;
-        for (auto instance : edit.getAllInputDevices())
-            if (instance->isOnTargetTrack (t, position))
-                return instance->getInputDevice().isEndToEndEnabled();
-        
+        for (auto instance : t.edit.getAllInputDevices())
+            if (te::isOnTargetTrack (*instance, t, position))
+                return instance->isLivePlayEnabled (t);
+
         return false;
     }
-    
+
     inline void enableInputMonitoring (te::AudioTrack& t, bool im, int position = 0)
     {
         if (isInputMonitoringEnabled (t, position) != im)
         {
-            auto& edit = t.edit;
-            for (auto instance : edit.getAllInputDevices())
-                if (instance->isOnTargetTrack (t, position))
-                    instance->getInputDevice().flipEndToEnd();
+            for (auto instance : t.edit.getAllInputDevices())
+            {
+                if (te::isOnTargetTrack (*instance, t, position))
+                {
+                    if (auto mode = instance->getInputDevice().getMonitorMode();
+                        mode == te::InputDevice::MonitorMode::on ||  mode == te::InputDevice::MonitorMode::off)
+                    {
+                        instance->getInputDevice().setMonitorMode (mode == te::InputDevice::MonitorMode::on
+                                                                    ? te::InputDevice::MonitorMode::off
+                                                                    : te::InputDevice::MonitorMode::on);
+                    }
+                }
+            }
         }
     }
-    
+
     inline bool trackHasInput (te::AudioTrack& t, int position = 0)
     {
         auto& edit = t.edit;
         for (auto instance : edit.getAllInputDevices())
-            if (instance->isOnTargetTrack (t, position))
+            if (te::isOnTargetTrack (*instance, t, position))
                 return true;
-        
+
         return false;
     }
 
@@ -265,12 +280,12 @@ class FlaggedAsyncUpdater : public AsyncUpdater
 public:
     //==============================================================================
     void markAndUpdate (bool& flag)     { flag = true; triggerAsyncUpdate(); }
-    
+
     bool compareAndReset (bool& flag) noexcept
     {
         if (! flag)
             return false;
-        
+
         flag = false;
         return true;
     }
@@ -291,6 +306,17 @@ struct Thumbnail    : public Component
                                    });
         cursor.setFill (findColour (Label::textColourId));
         addAndMakeVisible (cursor);
+
+        pendingCursorTo.setFill (juce::Colours::cyan);
+        addChildComponent (pendingCursorTo);
+
+        pendingCursorAt.setFill (juce::Colours::lightgreen);
+        addChildComponent (pendingCursorAt);
+    }
+
+    void start()
+    {
+        cursorUpdater.startTimerHz (25);
     }
 
     void setFile (const te::AudioFile& file)
@@ -298,6 +324,11 @@ struct Thumbnail    : public Component
         smartThumbnail.setNewFile (file);
         cursorUpdater.startTimerHz (25);
         repaint();
+    }
+
+    void setQuantisation (std::optional<int> numBars)
+    {
+        quantisationNumBars = numBars;
     }
 
     void paint (Graphics& g) override
@@ -316,41 +347,120 @@ struct Thumbnail    : public Component
         {
             const float brightness = smartThumbnail.isOutOfDate() ? 0.4f : 0.66f;
             g.setColour (colour.withMultipliedBrightness (brightness));
-            smartThumbnail.drawChannels (g, r, true, { 0s, te::TimePosition::fromSeconds (smartThumbnail.getTotalLength()) }, 1.0f);
+            smartThumbnail.drawChannels (g, r, { 0s, te::TimePosition::fromSeconds (smartThumbnail.getTotalLength()) }, 1.0f);
         }
     }
 
     void mouseDown (const MouseEvent& e) override
     {
+        positionToJumpAt = {};
+
         transport.setUserDragging (true);
         mouseDrag (e);
     }
 
     void mouseDrag (const MouseEvent& e) override
     {
+        if (! e.mouseWasDraggedSinceMouseDown())
+            return;
+
         jassert (getWidth() > 0);
         const float proportion = e.position.x / getWidth();
         transport.setPosition (toPosition (transport.getLoopRange().getLength()) * proportion);
     }
 
-    void mouseUp (const MouseEvent&) override
+    void mouseUp (const MouseEvent& e) override
     {
         transport.setUserDragging (false);
+
+        if (e.mouseWasDraggedSinceMouseDown())
+            return;
+
+        if (auto epc = transport.edit.getCurrentPlaybackContext())
+        {
+            auto& ts = transport.edit.tempoSequence;
+
+            // Simple quantisation for demo purposes here
+            //  1. Quantise the position to jump to
+            //  2. Quantise the time to jump to it
+            const float proportion = e.position.x / getWidth();
+            auto positionToJumpTo = toPosition (transport.getLoopRange().getLength()) * proportion;
+
+            if (quantisationNumBars)
+            {
+                positionToJumpTo = roundToNearest (toPosition (transport.getLoopRange().getLength()) * proportion, ts, *quantisationNumBars);
+                positionToJumpAt = roundUp (epc->getPosition(), ts, *quantisationNumBars);
+            }
+            else
+            {
+                positionToJumpAt = {};
+            }
+
+            epc->postPosition (positionToJumpTo, positionToJumpAt);
+        }
     }
 
 private:
     te::TransportControl& transport;
     te::SmartThumbnail smartThumbnail { transport.engine, te::AudioFile (transport.engine), *this, nullptr };
-    DrawableRectangle cursor;
+    DrawableRectangle cursor, pendingCursorTo, pendingCursorAt;
     te::LambdaTimer cursorUpdater;
+    std::optional<int> quantisationNumBars;
+    std::optional<te::TimePosition> positionToJumpAt;
+
+    static te::TimePosition roundTo (te::TimePosition pos, const te::TempoSequence& ts, int quantisationNumBars, double adjustment)
+    {
+        const auto barsBeats = ts.toBarsAndBeats (pos);
+        const auto nearestBar = static_cast<int> ((barsBeats.getTotalBars() / quantisationNumBars) + adjustment)
+                                    * quantisationNumBars;
+
+        return ts.toTime (te::tempo::BarsAndBeats { nearestBar });
+    }
+
+    static te::TimePosition roundToNearest (te::TimePosition pos, const te::TempoSequence& ts, int quantisationNumBars)
+    {
+        return roundTo (pos, ts, quantisationNumBars, 0.5 - 1.0e-10);
+    }
+
+    static te::TimePosition roundUp (te::TimePosition pos, const te::TempoSequence& ts, int quantisationNumBars)
+    {
+        return roundTo (pos, ts, quantisationNumBars, 1.0 - 1.0e-10);
+    }
 
     void updateCursorPosition()
     {
         const auto loopLength = transport.getLoopRange().getLength().inSeconds();
-        const auto proportion = loopLength == 0.0 ? 0.0 : transport.getPosition().inSeconds() / loopLength;
+        const auto proportion = juce::exactlyEqual (loopLength, 0.0) ? 0.0 : transport.getPosition().inSeconds() / loopLength;
 
         auto r = getLocalBounds().toFloat();
         const float x = r.getWidth() * float (proportion);
         cursor.setRectangle (r.withWidth (2.0f).withX (x));
+
+        // Pending cursor
+        pendingCursorTo.setVisible (false);
+        pendingCursorAt.setVisible (false);
+
+        if (quantisationNumBars)
+        {
+            if (auto epc = transport.edit.getCurrentPlaybackContext())
+            {
+                if (auto pendingChange = epc->getPendingPositionChange())
+                {
+                    {
+                        const auto pendingProportion = juce::exactlyEqual (loopLength, 0.0) ? 0.0 : pendingChange->inSeconds() / loopLength;
+                        const float pendingX = r.getWidth() * float (pendingProportion);
+                        pendingCursorTo.setRectangle (r.withWidth (2.0f).withX (pendingX));
+                        pendingCursorTo.setVisible (true);
+                    }
+
+                    {
+                        const auto pendingAtProportion = juce::exactlyEqual (loopLength, 0.0) ? 0.0 : positionToJumpAt->inSeconds() / loopLength;
+                        const float pendingX = r.getWidth() * float (pendingAtProportion);
+                        pendingCursorAt.setRectangle (r.withWidth (2.0f).withX (pendingX));
+                        pendingCursorAt.setVisible (true);
+                    }
+                }
+            }
+        }
     }
 };

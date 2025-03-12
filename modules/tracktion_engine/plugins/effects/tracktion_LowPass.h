@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -24,7 +24,7 @@ public:
     static const char* uniqueId;
     // BEATCONNECT MODIFICATION END
 
-    juce::String getName() override                     { return "LPF/HPF"; }
+    juce::String getName() const override               { return "LPF/HPF"; }
     juce::String getPluginType() override               { return xmlTypeName; }
     juce::String getShortName (int) override            { return "HP/LP"; }
     juce::String getSelectableDescription() override    { return TRANS("Low/High-Pass Filter"); }

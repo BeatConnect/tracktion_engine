@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -42,7 +42,8 @@ MidiNode::MidiNode (
       m_Edit(edit)
       // BEATCONNECT MODIFICATION END
 {
-    jassert (channelNumbers.getStart() > 0 && channelNumbers.getEnd() <= 16);
+    // -1 from the channel numbers end here as Range end is exclusive
+    jassert (channelNumbers.getStart() > 0 && (channelNumbers.getEnd() - 1) <= 16);
 
     for (auto& s : ms)
         s.updateMatchedPairs();

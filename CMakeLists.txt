@@ -2,17 +2,23 @@ include_guard()
 
 cmake_minimum_required (VERSION 3.15...3.20)
 
-project(
-        tracktion_engine
-        VERSION 2.0.0
+file(READ VERSION.md CURRENT_VERSION)
+project(tracktion
+        VERSION ${CURRENT_VERSION}
         DESCRIPTION
         "High level data model and set of classes for building \
         sequence based audio applications."
         HOMEPAGE_URL "https://github.com/Tracktion/tracktion_engine"
 )
 
+if (JUCE_CPM_DEVELOP)
+    include(cmake/CPM.cmake)
+    CPMAddPackage("gh:juce-framework/JUCE#develop")
+else()
+    add_subdirectory(modules/juce)
+endif()
+
 add_subdirectory(modules)
 
-if (TRACKTION_BUILD_EXAMPLES)
-    add_subdirectory(examples)
-endif()
+enable_testing()
+add_subdirectory(examples)

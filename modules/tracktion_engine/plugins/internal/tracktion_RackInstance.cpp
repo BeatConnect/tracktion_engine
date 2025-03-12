@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -123,11 +123,11 @@ RackInstance::~RackInstance()
 
 juce::ValueTree RackInstance::create (RackType& type)
 {
-    auto v = createValueTree (IDs::PLUGIN,
-                            IDs::type, RackInstance::xmlTypeName,
-                            IDs::rackType, type.rackID);
-
-    return v;
+    return createValueTree (IDs::PLUGIN,
+                            IDs::type,
+                            RackInstance::xmlTypeName,
+                            IDs::rackType,
+                            type.itemID);
 }
 
 juce::String RackInstance::getTooltip()
@@ -143,7 +143,7 @@ const char* RackInstance::xmlTypeName = "rack";
 const char* RackInstance::uniqueId = "848ee322-7f68-4415-aaf9-2a409969134e";
 // BEATCONNECT MODIFICATION END
 
-juce::String RackInstance::getName()
+juce::String RackInstance::getName() const
 {
     return type != nullptr ? type->rackName
                            : TRANS("Rack type missing!");
@@ -296,17 +296,6 @@ void RackInstance::initialise (const PluginInitialisationInfo& info)
 {
     if (type != nullptr)
         type->registerInstance (this, info);
-
-    initialiseWithoutStopping (info);
-}
-
-void RackInstance::initialiseWithoutStopping (const PluginInitialisationInfo&)
-{
-    const float wet = wetGain->getCurrentValue();
-    lastLeftIn   = dbToGain (leftInDb->getCurrentValue());
-    lastRightIn  = dbToGain (linkInputs ? leftInDb->getCurrentValue() : rightInDb->getCurrentValue());
-    lastLeftOut  = wet * dbToGain (leftOutDb->getCurrentValue());
-    lastRightOut = wet * dbToGain (linkOutputs ? leftOutDb->getCurrentValue() : rightOutDb->getCurrentValue());
 }
 
 void RackInstance::deinitialise()

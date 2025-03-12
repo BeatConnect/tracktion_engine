@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -87,7 +87,7 @@ public:
     // BEATCONNECT MODIFICATION END
 
     void initialiseFully() override;
-    juce::String getName() override                     { return TRANS("Freeze"); }
+    juce::String getName() const override               { return TRANS("Freeze"); }
     juce::String getPluginType() override               { return xmlTypeName; }
     juce::String getTooltip() override                  { return TRANS("Track will freeze up to this plugin"); }
     juce::String getSelectableDescription() override    { return TRANS("Freeze Point Plugin"); }
@@ -99,7 +99,6 @@ public:
     bool canBeAddedToRack() override                    { return false; }
     bool canBeAddedToMaster() override                  { return false; }
     bool canBeDisabled() override                       { return false; }
-    bool needsConstantBufferSize() override             { return false; }
 
     void initialise (const PluginInitialisationInfo&) override;
     void deinitialise() override;

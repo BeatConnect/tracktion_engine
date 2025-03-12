@@ -2,6 +2,7 @@
 [Tt]humbs.db
 
 #Visual Studio files
+.vs
 *.[Oo]bj
 *.aps
 *.pch
@@ -75,3 +76,5 @@ bin
 doxygen/doc
 **/cmake-build**
 **/.idea/**
+coverage.xml
+CoverageReport-*

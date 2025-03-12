@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -13,6 +13,8 @@
  #include <emmintrin.h>
 #endif
 
+#define RETURN_MID_NODES_OPTIMISATION 1
+
 namespace tracktion { inline namespace graph
 {
 
@@ -21,7 +23,8 @@ LockFreeMultiThreadedNodePlayer::LockFreeMultiThreadedNodePlayer()
     threadPool = getPoolCreatorFunction (ThreadPoolStrategy::realTime) (*this);
 }
 
-LockFreeMultiThreadedNodePlayer::LockFreeMultiThreadedNodePlayer (ThreadPoolCreator poolCreator)
+LockFreeMultiThreadedNodePlayer::LockFreeMultiThreadedNodePlayer (ThreadPoolCreator poolCreator, juce::AudioWorkgroup audioWorkgroup_)
+    : audioWorkgroup (std::move (audioWorkgroup_))
 {
     threadPool = poolCreator (*this);
 }
@@ -52,35 +55,40 @@ void LockFreeMultiThreadedNodePlayer::setNode (std::unique_ptr<Node> newNode, do
     // The prepare and set the new Node, passing in the old graph
     postNewGraph (prepareToPlay (std::move (newNode), lastGraphPosted,
                                  sampleRateToUse, blockSizeToUse,
-                                 lastAudioBufferPoolPosted));
+                                 useMemoryPool));
 }
 
 void LockFreeMultiThreadedNodePlayer::prepareToPlay (double sampleRateToUse, int blockSizeToUse)
 {
+    if (sampleRateToUse == sampleRate && blockSizeToUse == blockSize)
+        return;
+
     std::unique_ptr<NodeGraph> currentGraph;
-    AudioBufferPool* currentAudioBufferPool = nullptr;
 
     // Ensure we've flushed any pending Node to the current prepared Node
     {
         const auto scopedAccess = preparedNodeObject.getScopedAccess();
 
         if (auto pn = scopedAccess.get())
-        {
             currentGraph = std::move (pn->graph);
-            currentAudioBufferPool = pn->audioBufferPool.get();
-        }
     }
-    
+
     clearNode();
 
     // Don't pass in the old graph here as we're stealing the root from it
     postNewGraph (prepareToPlay (currentGraph != nullptr ? std::move (currentGraph->rootNode) : std::unique_ptr<Node>(), nullptr,
                                  sampleRateToUse, blockSizeToUse,
-                                 useMemoryPool ? currentAudioBufferPool : nullptr));
+                                 useMemoryPool));
 }
 
 int LockFreeMultiThreadedNodePlayer::process (const Node::ProcessContext& pc)
 {
+    const std::unique_lock<RealTimeSpinLock> l (processMutex, std::try_to_lock);
+
+    // If this fails, it's because the clearNode function is being called
+    if (! l.owns_lock())
+        return -1;
+
     const auto scopedAccess = preparedNodeObject.getScopedAccess();
     const auto preparedNode = scopedAccess.get();
 
@@ -164,52 +172,57 @@ void LockFreeMultiThreadedNodePlayer::enablePooledMemoryAllocations (bool usePoo
         prepareToPlay (sampleRate, blockSize);
 }
 
+void LockFreeMultiThreadedNodePlayer::enableNodeMemorySharing (bool shouldBeEnabled)
+{
+    if (std::exchange (nodeMemorySharingEnabled, shouldBeEnabled) != shouldBeEnabled)
+        prepareToPlay (sampleRate, blockSize);
+}
+
+
 //==============================================================================
 //==============================================================================
 std::unique_ptr<NodeGraph> LockFreeMultiThreadedNodePlayer::prepareToPlay (std::unique_ptr<Node> node, NodeGraph* oldGraph,
                                                                            double sampleRateToUse, int blockSizeToUse,
-                                                                           AudioBufferPool* pool)
+                                                                           bool useCurrentAudioBufferPool)
 {
     createThreads();
 
     sampleRate.store (sampleRateToUse, std::memory_order_release);
-    blockSize = blockSizeToUse;
+    blockSize.store (blockSizeToUse, std::memory_order_release);;
 
-    if (pool == nullptr)
-        return node_player_utils::prepareToPlay (std::move (node), oldGraph, sampleRateToUse, blockSizeToUse);
+    if (! useCurrentAudioBufferPool)
+        return node_player_utils::prepareToPlay (std::move (node), oldGraph, sampleRateToUse, blockSizeToUse, nullptr, nullptr, nodeMemorySharingEnabled);
 
     return node_player_utils::prepareToPlay (std::move (node), oldGraph, sampleRateToUse, blockSizeToUse,
-                                             [pool] (auto s) -> NodeBuffer
+                                             [this] (auto s) -> NodeBuffer
                                              {
-                                                auto data = pool->allocate (s);
+                                                auto data = lastAudioBufferPoolPosted->allocate (s);
                                                 return { data.getView().getFirstChannels (s.numChannels).getStart (s.numFrames), std::move (data) };
                                              },
-                                             [pool] (auto b)
+                                             [this] (auto b)
                                              {
-                                                 pool->release (std::move (b.data));
-                                             });
+                                                lastAudioBufferPoolPosted->release (std::move (b.data));
+                                             },
+                                             nodeMemorySharingEnabled);
 }
 
 //==============================================================================
 void LockFreeMultiThreadedNodePlayer::clearThreads()
 {
+    const std::scoped_lock<RealTimeSpinLock> sl (processMutex);
     threadPool->clearThreads();
 }
 
 void LockFreeMultiThreadedNodePlayer::createThreads()
 {
-    threadPool->createThreads (numThreadsToUse.load());
+    const std::scoped_lock<RealTimeSpinLock> sl (processMutex);
+    threadPool->createThreads (numThreadsToUse.load(), audioWorkgroup);
 }
 
 inline void LockFreeMultiThreadedNodePlayer::pause()
 {
-   #if JUCE_INTEL
-    _mm_pause();
-    _mm_pause();
-   #else
-    __asm__ __volatile__ ("yield");
-    __asm__ __volatile__ ("yield");
-   #endif
+    tracktion::core::pause();
+    tracktion::core::pause();
 }
 
 //==============================================================================
@@ -267,6 +280,7 @@ void LockFreeMultiThreadedNodePlayer::buildNodesOutputLists (PreparedNode& prepa
 
         preparedNode.playbackNodes.push_back (std::make_unique<PlaybackNode> (*n));
         n->internal = preparedNode.playbackNodes.back().get();
+        n->numOutputNodes = 0;
     }
 
     // Iterate all nodes, for each input, add to the current Nodes output list
@@ -277,7 +291,7 @@ void LockFreeMultiThreadedNodePlayer::buildNodesOutputLists (PreparedNode& prepa
             // Check the input is actually still in the graph
             jassert (std::find (preparedNode.graph->orderedNodes.begin(), preparedNode.graph->orderedNodes.end(), inputNode) != preparedNode.graph->orderedNodes.end());
             static_cast<PlaybackNode*> (inputNode->internal)->outputs.push_back (node);
-            inputNode->numOutputNodes++;
+            ++inputNode->numOutputNodes;
         }
     }
 }
@@ -351,6 +365,10 @@ Node* LockFreeMultiThreadedNodePlayer::updateProcessQueueForNode (PreparedNode& 
 {
     auto playbackNode = static_cast<PlaybackNode*> (node.internal);
 
+   #if RETURN_MID_NODES_OPTIMISATION
+    Node* nodeToReturn = nullptr;
+   #endif
+
     for (auto output : playbackNode->outputs)
     {
         auto outputPlaybackNode = static_cast<PlaybackNode*> (output->internal);
@@ -362,18 +380,35 @@ Node* LockFreeMultiThreadedNodePlayer::updateProcessQueueForNode (PreparedNode& 
             jassert (! outputPlaybackNode->hasBeenQueued);
             outputPlaybackNode->hasBeenQueued = true;
 
-            // If there is only one Node or we're at the last Node we can reutrn this to be processed by the same thread
+           #if RETURN_MID_NODES_OPTIMISATION
+            // We can return one Node to be processed on this thread, otherwise we can
+            // queue it for another thread to possibly process
+            if (nodeToReturn == nullptr)
+            {
+                nodeToReturn = &outputPlaybackNode->node;
+            }
+            else
+            {
+                preparedNode.nodesReadyToBeProcessed->try_enqueue (&outputPlaybackNode->node);
+                numNodesQueued.fetch_add (1, std::memory_order_acq_rel);
+            }
+           #else
+            // If there is only one Node or we're at the last Node we can return this to be processed by the same thread
             if (playbackNode->outputs.size() == 1
                 || output == playbackNode->outputs.back())
-               return &outputPlaybackNode->node;
+                return &outputPlaybackNode->node;
 
             preparedNode.nodesReadyToBeProcessed->try_enqueue (&outputPlaybackNode->node);
             numNodesQueued.fetch_add (1, std::memory_order_acq_rel);
-            threadPool->signalOne();
+           #endif
         }
     }
 
+   #if RETURN_MID_NODES_OPTIMISATION
+    return nodeToReturn;
+   #else
     return nullptr;
+   #endif
 }
 
 //==============================================================================

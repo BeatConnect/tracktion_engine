@@ -177,10 +177,10 @@ public:
     static const char* uniqueId;
     // BEATCONNECT MODIFICATION END
 
-    juce::String getName() override                     { return TRANS("4OSC"); }
+    juce::String getName() const override               { return TRANS("4OSC"); }
     juce::String getPluginType() override               { return xmlTypeName; }
     juce::String getShortName (int) override            { return "4OSC"; }
-    juce::String getSelectableDescription() override    { return TRANS("4OSC"); }
+    juce::String getSelectableDescription() override    { return TRANS("4OSC Plugin"); }
     // BEATCONNECT MODIFICATION START
     juce::String getUniqueId() override                 { return uniqueId; }
     virtual juce::String getVendor() override           { return "BeatConnect"; }
@@ -193,6 +193,7 @@ public:
     void deinitialise() override;
 
     void reset() override;
+    void midiPanic() override;
 
     void applyToBuffer (const PluginRenderContext&) override;
 
@@ -226,13 +227,8 @@ public:
 
         void restorePluginStateFromValueTree (const juce::ValueTree& v)
         {
-            juce::CachedValue<float>* cvsFloat[]  = { &tuneValue, &fineTuneValue, &levelValue, &pulseWidthValue,
-                &detuneValue, &spreadValue, &panValue, nullptr };
-
-            juce::CachedValue<int>* cvsInt[] { &waveShapeValue, &voicesValue, nullptr };
-
-            copyPropertiesToNullTerminatedCachedValues (v, cvsFloat);
-            copyPropertiesToNullTerminatedCachedValues (v, cvsInt);
+            copyPropertiesToCachedValues (v, tuneValue, fineTuneValue, levelValue, pulseWidthValue,
+                                          detuneValue, spreadValue, panValue, waveShapeValue, voicesValue);
         }
     };
 
@@ -253,13 +249,7 @@ public:
 
         void restorePluginStateFromValueTree (const juce::ValueTree& v)
         {
-            juce::CachedValue<float>* cvsFloat[]  = { &rateValue, &beatValue, &depthValue, nullptr };
-            juce::CachedValue<int>* cvsInt[] { &waveShapeValue, nullptr };
-            juce::CachedValue<bool>* cvsBool[] { &syncValue, nullptr };
-
-            copyPropertiesToNullTerminatedCachedValues (v, cvsFloat);
-            copyPropertiesToNullTerminatedCachedValues (v, cvsInt);
-            copyPropertiesToNullTerminatedCachedValues (v, cvsBool);
+            copyPropertiesToCachedValues (v, rateValue, beatValue, depthValue, waveShapeValue, syncValue);
         }
     };
 
@@ -277,9 +267,7 @@ public:
 
         void restorePluginStateFromValueTree (const juce::ValueTree& v)
         {
-            juce::CachedValue<float>* cvsFloat[]  = { &modAttackValue, &modDecayValue, &modSustainValue, &modReleaseValue, nullptr };
-
-            copyPropertiesToNullTerminatedCachedValues (v, cvsFloat);
+            copyPropertiesToCachedValues (v, modAttackValue, modDecayValue, modSustainValue, modReleaseValue);
         }
     };
 

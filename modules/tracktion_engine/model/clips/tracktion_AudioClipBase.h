@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -35,10 +35,12 @@ class AudioClipBase    : public Clip,
 public:
     //==============================================================================
     /** Creates a basic AudioClip. */
-    AudioClipBase (const juce::ValueTree&, EditItemID, Type, ClipTrack&);
+    AudioClipBase (const juce::ValueTree&, EditItemID, Type, ClipOwner&);
 
     /** Destructor. */
     ~AudioClipBase() override;
+
+    using Ptr = juce::ReferenceCountedObjectPtr<AudioClipBase>;
 
     //==============================================================================
     /** Returns the maximum length for this clip.
@@ -88,6 +90,11 @@ public:
         Call this if something changes that will affect the render e.g. tracks in an EditClip.
     */
     void updateSourceFile();
+
+    /** Subclasses can override this to indicate that they need to render their source file, irrespective
+        of their canUseProxy property.
+    */
+    virtual bool requiresRenderingSource() const        { return false; }
 
     /** Subclasses should override this to return true if they need the rest of the render callbacks. */
     virtual bool needsRender() const                    { return false; }
@@ -240,7 +247,7 @@ public:
     TimeRange getLoopRange() const;
 
     /** @internal */
-    bool canLoop() const override                       { return ! isUsingMelodyne(); }
+    bool canLoop() const override;
     /** @internal */
     bool isLooping() const override                     { return getAutoTempo() ? (loopLengthBeats > BeatDuration()) : (loopLength > TimeDuration()); }
     /** @internal */
@@ -284,13 +291,13 @@ public:
     //==============================================================================
     /** @internal */
     void setSpeedRatio (double newSpeed) override;
-    
+
     /** Sets a time-stretch mode to use. */
     void setTimeStretchMode (TimeStretcher::Mode mode);
-    
+
     /** Returns the time-stretch mode that has been set. */
     TimeStretcher::Mode getTimeStretchMode() const noexcept;
-    
+
     /** Returns the time-stretch mode that is in use.
         Note that even if not time-stretch mode has been set e.g. for speed changes,
         if auto-pitch or auto-tempo is enabled, a time-stretch mode will have to be
@@ -311,7 +318,7 @@ public:
         If enabled, this clip will adjust its playback speed to stay in sync with the Edit's TempoSequence.
     */
     void setAutoTempo (bool shouldUseAutoTempo)         { autoTempo = shouldUseAutoTempo; }
-    
+
     /** Returns true if auto-tempo has been set. */
     bool getAutoTempo() const                           { return autoTempo; }
 
@@ -325,15 +332,15 @@ public:
 
     /** Sets the AutoPitchMode to use. */
     void setAutoPitchMode (AutoPitchMode m)             { autoPitchMode = m; }
-    
+
     /** Returns the AutoPitchMode in use. */
     AutoPitchMode getAutoPitchMode()                    { return autoPitchMode; }
-    
+
     /** Enables/disables warp time.
         Warp Time enables segmented warping of the audio. @see WarpTimeManager
     */
     void setWarpTime (bool shouldUseWarpTime)           { warpTime = shouldUseWarpTime; }
-    
+
     /** Returns true if warp time is enabled. */
     bool getWarpTime() const                            { return warpTime; }
 
@@ -354,10 +361,10 @@ public:
         N.B. this is only used if auto-pitch is disabled.
     */
     void setPitchChange (float semitones)               { pitchChange = juce::jlimit (-48.0f, 48.0f, semitones); }
-    
+
     /** Returns the number of semitones to transpose the clip by. */
     float getPitchChange() const                        { return pitchChange; }
-    
+
     /** Returns the pitch change as a normalised ratio. 0 = no change, <0 = pitched down, >0 = pitched up. */
     float getPitchRatio() const                         { return juce::jlimit (0.1f, 10.0f, std::pow (2.0f, pitchChange / 12.0f)); }
 
@@ -374,7 +381,7 @@ public:
         [[ blocks ]]
     */
     LoopInfo autoDetectBeatMarkers (const LoopInfo& current, bool autoBeat, float sensitivity) const;
-    
+
     /** Performs a tempo-detection task and if successful sets the clip's LoopInfo tempo to this.
         @returns true if the tempo was sensibly detected
         [[ blocks ]]
@@ -396,7 +403,7 @@ public:
         @param warn     If true and clip FX are enabled, this will show a confirmation dialog to the user first
     */
     void enableEffects (bool enable, bool warn);
-    
+
     /** Returns true if ClipEffects are enabled. */
     bool effectsEnabled() const                         { return clipEffects != nullptr; }
 
@@ -405,7 +412,7 @@ public:
 
     /** Sets the effectsVisible flag for this clip. */
     void setEffectsVisible (bool b)                     { clipEffectsVisible = b; }
-    
+
     /** Returns true if the effectsVisible flag is set for this clip. */
     bool getEffectsVisible() const                      { return clipEffectsVisible; }
 
@@ -415,7 +422,7 @@ public:
     //==============================================================================
     /** Returns true if source file has a bwav time reference metadata property. */
     bool canSnapToOriginalBWavTime();
-    
+
     /** Moves the clip to the bwav time reference metadata property time. */
     void snapToOriginalBWavTime();
 
@@ -458,12 +465,12 @@ public:
         @param renderTimestretched If true, this should be a time-stretched version of the clip @see setAutoTempo
     */
     AudioFile getProxyFileToCreate (bool renderTimestretched);
-    
+
     /** Can be used to disable proxy file generation for this clip.
         If disabled, the audio engine will time-stretch the file in real time which may use more CPU.
     */
     void setUsesProxy (bool canUseProxy) noexcept;
-    
+
     /** Retuns true if this clip can use a proxy file. */
     bool canUseProxy() const noexcept               { return proxyAllowed && edit.canRenderProxies(); }
 
@@ -471,7 +478,7 @@ public:
         This can be because auto-tempo, auto-pitch or a pitch change has been set.
     */
     bool usesTimeStretchedProxy() const;
-    
+
     /** Creates a ProxyRenderingInfo object to decribe the stretch segements of this clip. */
     std::unique_ptr<ProxyRenderingInfo> createProxyRenderingInfo();
 
@@ -480,12 +487,6 @@ public:
 
     /** Triggers creation of a new proxy file if one is required. */
     void beginRenderingNewProxyIfNeeded();
-
-    /** Can be enabled to use a simpler playback node for time-stretched previews. */
-    void setUsesTimestretchedPreview (bool shouldUsePreview) noexcept   { useTimestretchedPreview = shouldUsePreview; }
-
-    /** Returns true if this clp should use a time-stretched preview. */
-    bool usesTimestretchedPreview() const noexcept                      { return useTimestretchedPreview; }
 
     /** Returns an AudioSegmentList describing this file if it is using auto-tempo.
         This can be useful for drawing waveforms.
@@ -506,13 +507,13 @@ public:
     //==============================================================================
     /** Reverses the loop points to expose the same section of the source file but reversed. */
     void reverseLoopPoints();
-    
+
     /** Trims the fade in out lengths to avoid any overlap between them. */
     void checkFadeLengthsForOverrun();
 
     /** Defines a prevous/next direction. @see getOverlappingClip */
     enum class ClipDirection { previous, next, none };
-    
+
     /** Returns the previous/next overlapping clip if one exists. */
     AudioClipBase* getOverlappingClip (ClipDirection) const;
 
@@ -566,9 +567,9 @@ public:
 
     //==============================================================================
     /** @internal */
-    void setTrack (ClipTrack*) override;
+    void setParent (ClipOwner*) override;
     /** @internal */
-    bool canGoOnTrack (Track&) override;
+    bool canBeAddedTo (ClipOwner&) override;
     /** @internal */
     void changed() override;
 
@@ -594,6 +595,18 @@ public:
     juce::Array<ReferencedItem> getReferencedItems() override;
     /** @internal */
     void reassignReferencedItem (const ReferencedItem&, ProjectItemID newID, double newStartTime) override;
+
+    //==============================================================================
+    /** @internal */
+    std::shared_ptr<LaunchHandle> getLaunchHandle() override;
+    /** @internal */
+    void setUsesGlobalLaunchQuatisation (bool useGlobal) override           { useClipLaunchQuantisation = ! useGlobal; }
+    /** @internal */
+    bool usesGlobalLaunchQuatisation() override                             { return ! useClipLaunchQuantisation; }
+    /** @internal */
+    LaunchQuantisation* getLaunchQuantisation() override;
+    /** @internal */
+    FollowActions* getFollowActions() override;
 
     //==============================================================================
     /** @internal */
@@ -638,12 +651,11 @@ protected:
     mutable WarpTimeManager::Ptr warpTimeManager;
     mutable std::unique_ptr<AudioSegmentList> audioSegmentList;
     std::unique_ptr<ClipEffects> clipEffects;
-    AsyncFunctionCaller asyncFunctionCaller;
+    mutable AsyncFunctionCaller asyncFunctionCaller;
 
     juce::AudioChannelSet activeChannels;
     void updateLeftRightChannelActivenessFlags();
 
-    bool useTimestretchedPreview = false;
     PluginList pluginList;
 
     bool lastRenderJobFailed = false;
@@ -672,6 +684,11 @@ private:
     //==============================================================================
     class TempoDetectTask;
     class BeatSensitivityComp;
+
+    std::shared_ptr<LaunchHandle> launchHandle;
+    juce::CachedValue<bool> useClipLaunchQuantisation;
+    std::unique_ptr<LaunchQuantisation> launchQuantisation;
+    std::unique_ptr<FollowActions> followActions;
 
     void updateReversedState();
     void updateAutoTempoState();

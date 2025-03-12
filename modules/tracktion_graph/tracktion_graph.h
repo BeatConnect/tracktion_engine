@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -19,7 +19,7 @@
 
   ID:               tracktion_graph
   vendor:           Tracktion Corporation
-  version:          1.0.0
+  version:          3.1.0
   name:             The Tracktion graph audio engine
   description:      Classes for creating and processing audio graphs
   website:          http://www.tracktion.com
@@ -34,7 +34,7 @@
 
 /*******************************************************************************
  PLEASE READ!
- 
+
  tracktion_graph is an experimental module. It is currently in an early stage of
  development so the API or functionality it contains is in no way stable. It
  will change so if you do want to use this in your own code please be aware of
@@ -63,12 +63,13 @@
 #include <cassert>
 #include <thread>
 #include <optional>
+#include <any>
 
 //==============================================================================
 #if __has_include(<choc/audio/choc_SampleBuffers.h>)
  #include <choc/audio/choc_SampleBuffers.h>
  #include <choc/audio/choc_MIDISequence.h>
- #include <choc/audio/choc_MultipleReaderMultipleWriterFIFO.h>
+ #include <choc/containers/choc_MultipleReaderMultipleWriterFIFO.h>
  #include <choc/containers/choc_NonAllocatingStableSort.h>
 #else
  #include "../3rd_party/choc/audio/choc_SampleBuffers.h"
@@ -77,11 +78,20 @@
  #include "../3rd_party/choc/containers/choc_NonAllocatingStableSort.h"
 #endif
 
+#include "../3rd_party/rigtorp/tracktion_rigtorp.hpp"
+
+
 //==============================================================================
 #include <juce_audio_basics/juce_audio_basics.h>
 #include "../tracktion_core/tracktion_core.h"
 
+#ifdef __GNUC__
+ #pragma GCC diagnostic push
+ #pragma GCC diagnostic ignored "-Wfloat-equal"
+#endif
+
 //==============================================================================
+#include "utilities/tracktion_MidiMessageWithSource.h"
 #include "utilities/tracktion_MidiMessageArray.h"
 namespace tracktion_engine = tracktion::engine;
 
@@ -115,3 +125,7 @@ namespace tracktion_engine = tracktion::engine;
 #include "tracktion_graph/nodes/tracktion_SummingNode.h"
 
 #include "tracktion_graph/players/tracktion_SimpleNodePlayer.h"
+
+#ifdef __GNUC__
+ #pragma GCC diagnostic pop
+#endif

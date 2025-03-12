@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -36,8 +36,9 @@ public:
     // BEATCONNECT MODIFICATION START
     static const char* uniqueId;
     // BEATCONNECT MODIFICATION END
+    static juce::ValueTree create();
 
-    juce::String getName() override;
+    juce::String getName() const override;
     juce::String getShortName (int suggestedMaxLength) override;
     juce::String getPluginType() override           { return xmlTypeName; }
     // BEATCONNECT MODIFICATION START
@@ -65,11 +66,16 @@ public:
 
     AutomatableParameter::Ptr gain;
 
+    /// @internal N.B. used only for testing
+    bool isOwnedBy (Track&);
+
 private:
     bool shouldProcess();
     //==============================================================================
     juce::CachedValue<float> lastVolumeBeforeMute;
     float lastGain = 1.0f;
+
+    juce::CriticalSection ownerTrackLock;
     Track* ownerTrack = nullptr;
 
     //==============================================================================

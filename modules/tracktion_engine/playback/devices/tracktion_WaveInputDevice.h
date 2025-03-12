@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -25,8 +25,7 @@ public:
     // BEATCONNECT MODIFICATION END (RELAY)
 
     //==============================================================================
-    WaveInputDevice (Engine&, const juce::String& name, const juce::String& type,
-                     const std::vector<ChannelIndex>&, DeviceType);
+    WaveInputDevice (Engine&, const juce::String& type, const WaveDeviceDescription&, DeviceType);
     ~WaveInputDevice() override;
 
     static juce::StringArray getMergeModes();
@@ -39,8 +38,8 @@ public:
     InputDeviceInstance* createInstance (EditPlaybackContext&) override;
 
     //==============================================================================
-    void flipEndToEnd() override;
-    void setEndToEnd (bool);
+    void setRecordAdjustment (TimeDuration);
+    TimeDuration getRecordAdjustment() const                    { return TimeDuration::fromSeconds (recordAdjustMs / 1000.0); }
     void setRecordAdjustmentMs (double ms);
     double getRecordAdjustmentMs() const                        { return recordAdjustMs; }
     bool isStereoPair() const;
@@ -105,7 +104,7 @@ private:
     // BEATCONNECT MODIFICATION END (RELAY)
 
     void loadProps();
-    void saveProps();
+    void saveProps() override;
     juce::AudioFormat* getFormatToUse() const;
 
     juce::Array<WaveInputDeviceInstance*> instances;

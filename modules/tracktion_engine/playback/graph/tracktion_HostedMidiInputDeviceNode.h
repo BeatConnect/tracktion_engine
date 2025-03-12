@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -20,22 +20,21 @@ class HostedMidiInputDeviceNode final : public tracktion::graph::Node,
 {
 public:
     HostedMidiInputDeviceNode (InputDeviceInstance&,
-                               MidiInputDevice&, MidiMessageArray::MPESourceID,
+                               MidiInputDevice&,
                                tracktion::graph::PlayHeadState&,
                                tracktion::ProcessState&);
     ~HostedMidiInputDeviceNode() override;
-    
+
     tracktion::graph::NodeProperties getNodeProperties() override;
     void prepareToPlay (const tracktion::graph::PlaybackInitialisationInfo&) override;
     bool isReadyToProcess() override;
     void process (ProcessContext&) override;
 
-    void handleIncomingMidiMessage (const juce::MidiMessage&) override;
+    void handleIncomingMidiMessage (const juce::MidiMessage&, MPESourceID) override;
 
 private:
     //==============================================================================
     InputDeviceInstance& instance;
-    const MidiMessageArray::MPESourceID midiSourceID = MidiMessageArray::notMPE;
 
     tracktion::graph::RealTimeSpinLock bufferMutex;
     MidiMessageArray incomingMessages;

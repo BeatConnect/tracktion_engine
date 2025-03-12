@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -30,8 +30,9 @@ public:
     // BEATCONNECT MODIFICATION START
     static const char* uniqueId;
     // BEATCONNECT MODIFICATION END
+    static juce::ValueTree create();
 
-    juce::String getName() override;
+    juce::String getName() const override;
     juce::String getPluginType() override;
     juce::String getShortName (int) override;
     // BEATCONNECT MODIFICATION START
@@ -59,7 +60,6 @@ public:
     juce::CachedValue<double> manualAdjustMs;
 
     void updateDeviceTypes();
-    void showLatencyTester();
 
     /** Returns true if either the send or return types are audio. */
     bool hasAudio() const;
@@ -74,17 +74,13 @@ public:
                                         juce::BigInteger& hasMidi,
                                         bool forInput);
 
-    /** @internal. */
-    void fillSendBuffer (choc::buffer::ChannelArrayView<float>*, MidiMessageArray*);
-    void fillReturnBuffer (choc::buffer::ChannelArrayView<float>*, MidiMessageArray*);
+    /** @internal */
+    int getLatencyNumSamples() const;
 
 private:
     //==============================================================================
-    choc::buffer::ChannelArrayBuffer<float> sendBuffer, returnBuffer;
-    MidiMessageArray sendMidiBuffer, returnMidiBuffer;
-    juce::CriticalSection bufferLock;
-
-    double latencySeconds = 0.0;
+    std::atomic<int> latencyNumSamples { 0 };
+    std::atomic<double> latencySeconds { 0.0 };
     DeviceType sendDeviceType = noDevice, returnDeviceType = noDevice;
 
     void valueTreePropertyChanged (juce::ValueTree&, const juce::Identifier&) override;

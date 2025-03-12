@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -11,8 +11,8 @@
 namespace tracktion { inline namespace engine
 {
 
-EditClip::EditClip (const juce::ValueTree& v, EditItemID clipID, ClipTrack& targetTrack, ProjectItemID sourceEditID)
-    : AudioClipBase (v, clipID, Type::edit, targetTrack),
+EditClip::EditClip (const juce::ValueTree& v, EditItemID clipID, ClipOwner& targetParent, ProjectItemID sourceEditID)
+    : AudioClipBase (v, clipID, Type::edit, targetParent),
       waveInfo (getAudioFile().getInfo())
 {
     renderOptions = RenderOptions::forEditClip (*this);
@@ -47,7 +47,7 @@ void EditClip::initialise()
 {
     AudioClipBase::initialise();
 
-    if (waveInfo.sampleRate <= 0 || waveInfo.lengthInSamples <= 0)
+    if (waveInfo.hashCode == 0)
         updateWaveInfo();
 
     if (! renderEnabled)
@@ -90,6 +90,11 @@ void EditClip::setLoopDefaults()
 }
 
 //==============================================================================
+bool EditClip::requiresRenderingSource() const
+{
+    return true;
+}
+
 bool EditClip::needsRender() const
 {
     if (! renderEnabled || editSnapshot == nullptr)
@@ -200,12 +205,12 @@ void EditClip::sourceMediaChanged()
     }
 
     updateReferencedEdits();
-    updateWaveInfo();
     generateHash();
 
     if (! invalidSource)
         updateSourceFile();
 
+    updateWaveInfo();
     changed();
 
     if (isInitialised)
@@ -268,6 +273,7 @@ void EditClip::updateWaveInfo()
     jassert ((! needsRender()) || getSourceLength() > 0s);
     const auto sourceLength = getSourceLength() == 0s ? 5.0 : getSourceLength().inSeconds();
 
+    waveInfo = getAudioFile().getInfo();
     waveInfo.bitsPerSample      = renderOptions->getBitDepth();
     waveInfo.sampleRate         = renderOptions->getSampleRate();
     waveInfo.numChannels        = renderOptions->getStereo() ? 2 : 1;
@@ -377,6 +383,9 @@ void EditClip::updateLoopInfoBasedOnSource (bool updateLength)
         loopInfo.setDenominator (timeSigDenom);
     }
 
+    if (pitch >= 0)
+        loopInfo.setRootNote (pitch);
+
     // if these haven't been set then match them to the new edit
     auto& ts = edit.tempoSequence;
     auto clipPos = getPosition();
@@ -389,6 +398,9 @@ void EditClip::updateLoopInfoBasedOnSource (bool updateLength)
 
     if (loopInfo.getNumBeats() == 0)
         loopInfo.setNumBeats (length.get().inSeconds() * (ts.getTempoAt (clipPos.getStart()).getBpm() / 60.0));
+
+    if (loopInfo.getRootNote() < 0)
+        loopInfo.setRootNote (pitch);
 
     // also need to adjust clip length
     if (updateLength)
@@ -414,9 +426,6 @@ void EditClip::updateLoopInfoBasedOnSource (bool updateLength)
             setAutoTempo (true);
         }
     }
-
-    if (updateLength && pitch > 0)
-        loopInfo.setRootNote (pitch);
 }
 
 double EditClip::getCurrentStretchRatio() const

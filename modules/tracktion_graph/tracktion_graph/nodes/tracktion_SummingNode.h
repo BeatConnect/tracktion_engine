@@ -76,7 +76,7 @@ public:
         props.hasAudio = false;
         props.hasMidi = false;
         props.numberOfChannels = 0;
-        props.latencyNumSamples = std::numeric_limits<int>::min();
+        props.latencyNumSamples = nodes.empty() ? 0 : std::numeric_limits<int>::min();
 
         for (auto& node : nodes)
         {
@@ -85,7 +85,9 @@ public:
             props.hasMidi = props.hasMidi || nodeProps.hasMidi;
             props.numberOfChannels = std::max (props.numberOfChannels, nodeProps.numberOfChannels);
             props.latencyNumSamples = std::max (props.latencyNumSamples, nodeProps.latencyNumSamples);
-            hash_combine (props.nodeID, nodeProps.nodeID);
+
+            if (props.nodeID != 0 || nodeProps.nodeID != 0)
+                hash_combine (props.nodeID, nodeProps.nodeID);
         }
 
         cachedNodeProperties = props;
@@ -115,6 +117,20 @@ public:
     //  }
     //
     // BEATCONNECT MODIFICATION END
+
+    TransformResult transform (Node&, const std::vector<Node*>&, TransformCache&) override
+    {
+        const bool hasFlattened = flattenSummingNodes();
+        const bool hasCreatedLatency = createLatencyNodes();
+
+        if (hasFlattened)
+            return TransformResult::nodesDeleted;
+
+        if (hasCreatedLatency)
+            return TransformResult::connectionsMade;
+
+        return TransformResult::none;
+    }
 
     void prepareToPlay (const PlaybackInitialisationInfo& info) override
     {
@@ -279,7 +295,7 @@ private:
         {
             auto props = node->getNodeProperties();
             const int nodeLatency = props.latencyNumSamples;
-            const int latencyToAdd = maxLatency - nodeLatency;
+            const int latencyToAdd = subtractNoWrap (maxLatency, nodeLatency);
 
             if (latencyToAdd <= 0)
                 continue;

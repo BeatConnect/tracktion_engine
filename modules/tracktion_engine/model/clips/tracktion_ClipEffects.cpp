@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -390,8 +390,17 @@ struct AudioNodeRenderJob  : public ClipEffect::ClipEffectRenderJob
     bool setUpRender() override
     {
         CRASH_TRACER
-        callBlocking ([this] { createAndPrepareRenderContext(); });
-        return true;
+        try
+        {
+            callBlocking ([this] { createAndPrepareRenderContext(); });
+            return true;
+        }
+        catch (std::runtime_error& err)
+        {
+            TRACKTION_LOG_ERROR (err.what());
+        }
+
+        return false;
     }
 
     bool renderNextBlock() override
@@ -421,11 +430,12 @@ struct AudioNodeRenderJob  : public ClipEffect::ClipEffectRenderJob
     struct RenderContext
     {
         RenderContext (const AudioFile& destination, const AudioFile& source,
-                       SampleCount blockSizeToUse, double prerollTimeS)
+                       int numDestChannels, SampleCount blockSizeToUse, double prerollTimeS)
             : blockSize (blockSizeToUse)
         {
             CRASH_TRACER
             jassert (source.isValid());
+            jassert (numDestChannels > 0);
             streamRange = { 0.0, source.getLength() };
             jassert (! streamRange.isEmpty());
 
@@ -440,20 +450,20 @@ struct AudioNodeRenderJob  : public ClipEffect::ClipEffectRenderJob
             if (sourceInfo.metadata.getValue ("MetaDataSource", "None") == "AIFF")
                 sourceInfo.metadata.clear();
 
-            writer.reset (new AudioFileWriter (tempFile, destination.engine->getAudioFileFormatManager().getWavFormat(),
-                                               sourceInfo.numChannels, sourceInfo.sampleRate,
-                                               std::max (16, sourceInfo.bitsPerSample),
-                                               sourceInfo.metadata, 0));
+            writer = std::make_unique<AudioFileWriter> (tempFile, destination.engine->getAudioFileFormatManager().getWavFormat(),
+                                                        numDestChannels, sourceInfo.sampleRate,
+                                                        std::max (16, sourceInfo.bitsPerSample),
+                                                        sourceInfo.metadata, 0);
 
             renderingBuffer = std::make_unique<juce::AudioBuffer<float>> (writer->getNumChannels(), (int) blockSize + 256);
             auto renderingBufferChannels = juce::AudioChannelSet::canonicalChannelSet (renderingBuffer->getNumChannels());
 
             // now prepare the render context
-            rc.reset (new AudioRenderContext (localPlayhead, streamRange,
-                                              renderingBuffer.get(),
-                                              renderingBufferChannels, 0, (int) blockSize,
-                                              nullptr, 0.0,
-                                              AudioRenderContext::playheadJumped, true));
+            rc = std::make_unique<AudioRenderContext> (localPlayhead, streamRange,
+                                                       renderingBuffer.get(),
+                                                       renderingBufferChannels, 0, (int) blockSize,
+                                                       nullptr, 0.0,
+                                                       AudioRenderContext::playheadJumped, true);
 
             // round pre roll timr to nearest block
             numPreBlocks = (int) std::ceil ((prerollTimeS * sourceInfo.sampleRate) / blockSize);
@@ -537,11 +547,12 @@ struct AudioNodeRenderJob  : public ClipEffect::ClipEffectRenderJob
 
     void createAndPrepareRenderContext()
     {
-        renderContext.reset (new RenderContext (destination, source, blockSize, prerollTime));
-
         {
             AudioNodeProperties props;
             node->getAudioNodeProperties (props);
+
+            renderContext = std::make_unique<RenderContext> (destination, source, props.numberOfChannels,
+                                                             blockSize, prerollTime);
         }
 
         {
@@ -590,10 +601,10 @@ struct BlockBasedRenderJob : public ClipEffect::ClipEffectRenderJob
 
         sourceLengthSamples = static_cast<SampleCount> (sourceLengthSeconds * reader->sampleRate);
 
-        writer.reset (new AudioFileWriter (destination, engine.getAudioFileFormatManager().getWavFormat(),
-                                           sourceInfo.numChannels, sourceInfo.sampleRate,
-                                           std::max (16, sourceInfo.bitsPerSample),
-                                           sourceInfo.metadata, 0));
+        writer = std::make_unique<AudioFileWriter> (destination, engine.getAudioFileFormatManager().getWavFormat(),
+                                                    sourceInfo.numChannels, sourceInfo.sampleRate,
+                                                    std::max (16, sourceInfo.bitsPerSample),
+                                                    sourceInfo.metadata, 0);
 
         return writer->isOpen();
     }
@@ -634,7 +645,7 @@ public:
     {
         CRASH_TRACER
         auto tm = clip.getTimeStretchMode();
-        proxyInfo.reset (new AudioClipBase::ProxyRenderingInfo());
+        proxyInfo = std::make_unique<AudioClipBase::ProxyRenderingInfo>();
         proxyInfo->clipTime     = { {}, wtm.getWarpEndMarkerTime() };
         proxyInfo->speedRatio   = 1.0;
         proxyInfo->mode         = (tm != TimeStretcher::disabled && tm != TimeStretcher::melodyne)
@@ -815,9 +826,9 @@ juce::ReferenceCountedObjectPtr<ClipEffect::ClipEffectRenderJob> FadeInOutEffect
                 n = new FadeInOutAudioNode (n,
                                             toEditTimeRange (fadeInRange), toEditTimeRange (fadeOutRange),
                                             fadeInType, fadeOutType);
-            
+
             break;
-            
+
         case EffectType::tapeStartStop:
             if (fadeIn.get() > TimeDuration() || fadeOut.get() > TimeDuration())
             {
@@ -826,9 +837,9 @@ juce::ReferenceCountedObjectPtr<ClipEffect::ClipEffectRenderJob> FadeInOutEffect
                                             fadeInType, fadeOutType);
                 blockSize = 128;
             }
-            
+
             break;
-            
+
         case EffectType::none:
         case EffectType::volume:
         case EffectType::stepVolume:
@@ -1240,7 +1251,12 @@ struct PluginUnloadInhibitor    : private juce::Timer
     {
         for (int i = jobs.size(); --i >= 0;)
         {
-            if (jobs[i]->progress >= 1.0f)
+            auto job = jobs[i];
+
+            if (job == nullptr)
+                continue;
+
+            if (job->progress.load() >= 1.0f)
                 jobs.remove (i);
             else
                 return;
@@ -1252,18 +1268,18 @@ struct PluginUnloadInhibitor    : private juce::Timer
 
     void load()
     {
-        callBlocking ([this]() { plugin->setProcessingEnabled (true); callback(); });
+        callBlockingCatching ([this] { plugin->setProcessingEnabled (true); callback(); });
     }
 
     void unload()
     {
-        callBlocking ([this]() { plugin->setProcessingEnabled (false); callback(); });
+        callBlockingCatching ([this] { plugin->setProcessingEnabled (false); callback(); });
     }
 
     int count = 0;
     Plugin::Ptr plugin;
     juce::ReferenceCountedArray<AudioNodeRenderJob> jobs;
-    std::function<void(void)> callback;
+    std::function<void()> callback;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (PluginUnloadInhibitor)
 };
@@ -1287,6 +1303,7 @@ PluginEffect::PluginEffect (const juce::ValueTree& v, ClipEffects& o)
     if (pluginState.isValid())
     {
         pluginState.setProperty (IDs::process, false, nullptr); // always restore plugin to non-processing state on load
+        // Exception will be caught by Edit constructor
         callBlocking ([this, pluginState]() { plugin = edit.getPluginCache().getOrCreatePluginFor (pluginState); });
     }
 
@@ -1517,10 +1534,10 @@ struct MakeMonoEffect::MakeMonoRenderJob : public BlockBasedRenderJob
 
         sourceLengthSamples = static_cast<SampleCount> (sourceLengthSeconds * reader->sampleRate);
 
-        writer.reset (new AudioFileWriter (destination, engine.getAudioFileFormatManager().getWavFormat(),
-                                           1, sourceInfo.sampleRate,
-                                           std::max (16, sourceInfo.bitsPerSample),
-                                           sourceInfo.metadata, 0));
+        writer = std::make_unique<AudioFileWriter> (destination, engine.getAudioFileFormatManager().getWavFormat(),
+                                                    1, sourceInfo.sampleRate,
+                                                    std::max (16, sourceInfo.bitsPerSample),
+                                                    sourceInfo.metadata, 0);
 
         return writer->isOpen();
     }
@@ -1744,13 +1761,13 @@ struct AggregateJob  : public RenderManager::Job
 
                 auto& afm = engine.getAudioFileManager();
                 afm.releaseFile (currentJob->destination);
-               
+
                 if (! currentJob->destination.isNull())
-                    callBlocking ([&afm, fileToValidate = currentJob->destination]
-                                  {
-                                      afm.validateFile (fileToValidate, true);
-                                      jassert (fileToValidate.isValid());
-                                  });
+                    callBlockingCatching ([&afm, fileToValidate = currentJob->destination]
+                                          {
+                                              afm.validateFile (fileToValidate, true);
+                                              jassert (fileToValidate.isValid());
+                                          });
 
                 lastFile = currentJob->destination.getFile();
                 currentJob = nullptr;

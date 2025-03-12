@@ -1449,7 +1449,7 @@ void FourOscPlugin::flushPluginStateToValueTree()
     }
 
     state.addChild (mm, -1, um);
-    
+
     Plugin::flushPluginStateToValueTree(); // Add any parameter values that are being modified
 }
 
@@ -1475,6 +1475,11 @@ void FourOscPlugin::deinitialise()
 
 //==============================================================================
 void FourOscPlugin::reset()
+{
+    turnOffAllVoices (false);
+}
+
+void FourOscPlugin::midiPanic()
 {
     turnOffAllVoices (false);
 }
@@ -1614,19 +1619,13 @@ void FourOscPlugin::updateParams (juce::AudioBuffer<float>& buffer)
 //==============================================================================
 void FourOscPlugin::restorePluginStateFromValueTree (const juce::ValueTree& v)
 {
-    juce::CachedValue<float>* cvsFloat[]  = { &ampAttackValue, &ampDecayValue, &ampSustainValue, &ampReleaseValue, &ampVelocityValue,
-        &filterAttackValue, &filterDecayValue, &filterSustainValue, &filterReleaseValue, &filterFreqValue, &filterResonanceValue,
-        &filterAmountValue, &filterKeyValue, &filterVelocityValue, &distortionValue, &reverbSizeValue, &reverbDampingValue, &reverbWidthValue,
-        &reverbMixValue, &delayValue, &delayFeedbackValue, &delayCrossfeedValue, &delayMixValue,
-        &chorusSpeedValue, &chorusDepthValue, &chorusWidthValue, &chorusMixValue, &legatoValue,
-        &masterLevelValue, nullptr };
-
-    juce::CachedValue<int>* cvsInt[] { &voiceModeValue, &voicesValue, &filterTypeValue, &filterSlopeValue, nullptr };
-    juce::CachedValue<bool>* cvsBool[] { &ampAnalogValue, &distortionOnValue, &reverbOnValue, &delayOnValue, &chorusOnValue, nullptr };
-
-    copyPropertiesToNullTerminatedCachedValues (v, cvsFloat);
-    copyPropertiesToNullTerminatedCachedValues (v, cvsInt);
-    copyPropertiesToNullTerminatedCachedValues (v, cvsBool);
+    copyPropertiesToCachedValues (v, ampAttackValue, ampDecayValue, ampSustainValue, ampReleaseValue, ampVelocityValue, filterAttackValue,
+                                  filterDecayValue, filterSustainValue, filterReleaseValue, filterFreqValue, filterResonanceValue,
+                                  filterAmountValue, filterKeyValue, filterVelocityValue, distortionValue, reverbSizeValue,
+                                  reverbDampingValue, reverbWidthValue, reverbMixValue, delayValue, delayFeedbackValue, delayCrossfeedValue,
+                                  delayMixValue, chorusSpeedValue, chorusDepthValue, chorusWidthValue, chorusMixValue, legatoValue,
+                                  masterLevelValue, voiceModeValue, voicesValue, filterTypeValue, filterSlopeValue,
+                                  ampAnalogValue, distortionOnValue, reverbOnValue, delayOnValue, chorusOnValue);
 
     auto um = getUndoManager();
 
@@ -1644,7 +1643,7 @@ void FourOscPlugin::restorePluginStateFromValueTree (const juce::ValueTree& v)
         state.removeChild (mm, um);
 
     mm = v.getChildWithName (IDs::MODMATRIX);
-    
+
     if (mm.isValid())
         state.addChild (mm.createCopy(), -1, um);
 

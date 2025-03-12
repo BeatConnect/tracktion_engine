@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -35,6 +35,8 @@ AuxSendPlugin::~AuxSendPlugin()
 
 bool AuxSendPlugin::shouldProcess()
 {
+    const juce::ScopedLock sl (ownerTrackLock);
+
     if (ownerTrack != nullptr)
     {
         // If this track gets disabled when muted,
@@ -45,6 +47,7 @@ bool AuxSendPlugin::shouldProcess()
 
         return ! ownerTrack->isMuted (true);
     }
+
     return true;
 }
 
@@ -53,7 +56,13 @@ const char* AuxSendPlugin::xmlTypeName = "auxsend";
 const char* AuxSendPlugin::uniqueId = "3fe6a382-018f-4c67-80a7-74efbc58f31f";
 // BEATCONNECT MODIFICATION END
 
-juce::String AuxSendPlugin::getName()
+juce::ValueTree AuxSendPlugin::create()
+{
+    return createValueTree (IDs::PLUGIN,
+                            IDs::type, xmlTypeName);
+}
+
+juce::String AuxSendPlugin::getName() const
 {
     juce::String nm (edit.getAuxBusName (busNumber));
 
@@ -82,7 +91,11 @@ void AuxSendPlugin::initialise (const PluginInitialisationInfo& info)
 
 void AuxSendPlugin::initialiseWithoutStopping (const PluginInitialisationInfo&)
 {
-    ownerTrack = getOwnerTrack();
+    TRACKTION_ASSERT_MESSAGE_THREAD
+    auto newOwnerTrack = getOwnerTrack();
+
+    const juce::ScopedLock sl (ownerTrackLock);
+    ownerTrack = newOwnerTrack;
 }
 
 void AuxSendPlugin::deinitialise()
@@ -161,15 +174,16 @@ juce::StringArray AuxSendPlugin::getBusNames (Edit& ed, int maxNumBusses)
 
 void AuxSendPlugin::restorePluginStateFromValueTree (const juce::ValueTree& v)
 {
-    juce::CachedValue<float>* cvsFloat[]  = { &gainLevel, nullptr };
-    juce::CachedValue<int>* cvsInt[]      = { &busNumber, nullptr };
-    juce::CachedValue<bool>* cvsBool[]    = { &invertPhase, nullptr };
-    copyPropertiesToNullTerminatedCachedValues (v, cvsFloat);
-    copyPropertiesToNullTerminatedCachedValues (v, cvsInt);
-    copyPropertiesToNullTerminatedCachedValues (v, cvsBool);
+    copyPropertiesToCachedValues (v, gainLevel, busNumber, invertPhase);
 
     for (auto p : getAutomatableParameters())
         p->updateFromAttachedValue();
+}
+
+bool AuxSendPlugin::isOwnedBy (Track& t)
+{
+    const juce::ScopedLock sl (ownerTrackLock);
+    return &t == ownerTrack;
 }
 
 }} // namespace tracktion { inline namespace engine

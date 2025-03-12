@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -27,15 +27,16 @@ public:
     static const char* uniqueId;
     // BEATCONNECT MODIFICATION END
 
-    juce::String getName() override                 { return TRANS("Level Meter"); }
-    juce::String getPluginType() override           { return xmlTypeName; }
-    juce::String getShortName (int) override        { return "Meter"; }
-    juce::String getTooltip() override              { return TRANS("Level meter plugin") + "$levelmeterplugin"; }
+    juce::String getName() const override               { return TRANS("Level Meter"); }
+    juce::String getPluginType() override               { return xmlTypeName; }
+    juce::String getShortName (int) override            { return "Meter"; }
+    juce::String getTooltip() override                  { return TRANS("Level meter plugin") + "$levelmeterplugin"; }
+    bool canBeDisabled() override                       { return false; }
+    bool shouldMeasureCpuUsage() const noexcept final   { return false; }
+
     // BEATCONNECT MODIFICATION START
-    juce::String getUniqueId() override             { return uniqueId; }
+    juce::String getUniqueId() override { return uniqueId; }
     // BEATCONNECT MODIFICATION END
-    bool canBeDisabled() override                   { return false; }
-    bool needsConstantBufferSize() override         { return false; }
 
     int getNumOutputChannelsGivenInputs (int numInputChannels) override     { return juce::jmin (numInputChannels, 2); }
 

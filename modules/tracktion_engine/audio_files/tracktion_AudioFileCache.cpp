@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -11,6 +11,16 @@
 namespace tracktion { inline namespace engine
 {
 
+//==============================================================================
+//==============================================================================
+FallbackReader::FallbackReader()
+    : juce::AudioFormatReader (nullptr, "FallbackReader")
+{
+}
+
+
+//==============================================================================
+//==============================================================================
 static void clearSetOfChannels (int* const* channels, int numChannels, int offset, int numSamples) noexcept
 {
     for (int i = 0; i < numChannels; ++i)
@@ -18,6 +28,39 @@ static void clearSetOfChannels (int* const* channels, int numChannels, int offse
             juce::FloatVectorOperations::clear (chan + offset, numSamples);
 }
 
+//==============================================================================
+//==============================================================================
+struct AudioFileCache::ScopedFileRead
+{
+    ScopedFileRead (AudioFileCache& c)
+        : cache (c)
+    {
+    }
+
+    ~ScopedFileRead()
+    {
+        const auto durationMs = juce::Time::getMillisecondCounterHiRes() - startTimeMs;
+
+        // We have to roll our own fetch_add until it's available on all platforms for atomic<double>
+        auto expected = cache.blockDurationMs.load (std::memory_order_acquire);
+        auto desired = expected + durationMs;
+
+        while (! cache.blockDurationMs.compare_exchange_weak (expected, desired,
+                                                              std::memory_order_release,
+                                                              std::memory_order_relaxed))
+        {
+            expected = cache.blockDurationMs.load (std::memory_order_acquire);
+            desired = expected + durationMs;
+        }
+    }
+
+    AudioFileCache& cache;
+    const double startTimeMs { juce::Time::getMillisecondCounterHiRes() };
+};
+
+
+//==============================================================================
+//==============================================================================
 class AudioFileCache::CachedFile
 {
 public:
@@ -88,7 +131,7 @@ public:
     {
         {
             const juce::ScopedReadLock sl (readerLock);
-            
+
             if (mapEntireFile && readers.size() > 0)
                 return false;
         }
@@ -265,7 +308,7 @@ public:
     bool isUnused() const
     {
         const juce::ScopedReadLock sl (clientListLock);
-        
+
         return clients.isEmpty();
     }
 
@@ -348,6 +391,7 @@ public:
     {
         jassert (destSamples != nullptr);
         jassert (startSample >= 0);
+        jassert (startOffsetInDestBuffer >= 0);
 
         bool allDataRead = true;
 
@@ -364,7 +408,7 @@ public:
 
             if (l.isLocked && l.reader != nullptr)
             {
-                auto numThisTime = std::min (numSamples, (int) (l.reader->getMappedSection().getEnd() - startSample));
+                auto numThisTime = int (std::min<int64_t> (numSamples, l.reader->getMappedSection().getEnd() - startSample));
 
                 l.reader->readSamples (destSamples, numDestChannels, startOffsetInDestBuffer, startSample, numThisTime);
 
@@ -458,7 +502,7 @@ private:
     std::atomic<bool> failedToOpenFile { false };
     uint32_t lastFailedOpenAttempt = 0;
     juce::Random random;
-    
+
     juce::ReadWriteLock clientListLock, readerLock;
 
     juce::MemoryMappedAudioFormatReader* findReaderFor (SampleCount sample) const
@@ -535,10 +579,7 @@ public:
 
         while (! threadShouldExit())
         {
-            {
-                const ScopedCpuMeter cpu (owner.cpuUsage, 0.2);
-                owner.touchReaders();
-            }
+            owner.touchReaders();
 
             wait (TransportControl::getNumPlayingTransports (owner.engine) > 0 ? 10 : 250);
         }
@@ -600,10 +641,10 @@ void AudioFileCache::setCacheSizeSamples (SampleCount samples)
             releaseAllFiles();
         }
 
-        mapperThread.reset (new MapperThread (*this));
+        mapperThread = std::make_unique<MapperThread> (*this);
         mapperThread->startThread (juce::Thread::Priority::normal);
 
-        refresherThread.reset (new RefresherThread (*this));
+        refresherThread = std::make_unique<RefresherThread> (*this);
         refresherThread->startThread (juce::Thread::Priority::high);
     }
 }
@@ -664,7 +705,7 @@ void AudioFileCache::purgeOldFiles()
 
     const juce::ScopedWriteLock sl (fileListLock);
 
-    for (auto f :  activeFiles)
+    for (auto f : activeFiles)
         f->purgeOrphanReaders();
 
     for (int i = activeFiles.size(); --i >= 0;)
@@ -719,6 +760,32 @@ bool AudioFileCache::hasCacheMissed (bool clearMissedFlag)
     return didMiss;
 }
 
+TimeDuration AudioFileCache::getCpuUsage() const
+{
+    return TimeDuration::fromSeconds (lastBlockDurationMs.load (std::memory_order_acquire) / 1000.0);
+}
+
+void AudioFileCache::nextBlockStarted()
+{
+    const auto last = lastBlockDurationMs.load (std::memory_order_acquire);
+    const auto current = blockDurationMs.exchange (0.0, std::memory_order_acq_rel);
+    lastBlockDurationMs.store (current > last ? current
+                                              : last + 0.2 * (current - last),
+                               std::memory_order_release);
+}
+
+bool AudioFileCache::hasMappedReader (const AudioFile& af, SampleCount c) const
+{
+    const juce::ScopedReadLock rl (fileListLock);
+
+    for (auto s : activeFiles)
+        if (s->info.hashCode == af.getHash())
+            if (CachedFile::LockedReaderFinder (*s, c, 0).reader)
+                return true;
+
+    return false;
+}
+
 //==============================================================================
 AudioFileCache::Reader::Ptr AudioFileCache::createReader (const AudioFile& file)
 {
@@ -736,11 +803,47 @@ AudioFileCache::Reader::Ptr AudioFileCache::createReader (const AudioFile& file)
     {
         backgroundReaderThread.startThread (juce::Thread::Priority::low);
 
-        return new Reader (*this, nullptr, new juce::BufferingAudioReader (reader, backgroundReaderThread,
-                                                                           48000 * 5));
+        return new Reader (*this, nullptr, std::make_unique<BufferingAudioReaderWrapper> (std::make_unique<juce::BufferingAudioReader> (reader, backgroundReaderThread,
+                                                                                                                                        48000 * 5)));
     }
 
     return {};
+}
+
+AudioFileCache::Reader::Ptr AudioFileCache::createReader (const AudioFile& file,
+                                                          const std::function<std::unique_ptr<FallbackReader> (juce::AudioFormatReader* sourceReader,
+                                                                                                               juce::TimeSliceThread& timeSliceThread,
+                                                                                                               int samplesToBuffer)>& createFallbackReader)
+{
+    CRASH_TRACER
+    const juce::ScopedWriteLock sl (fileListLock);
+
+    if (auto f = getOrCreateCachedFile (file))
+    {
+        auto r = new Reader (*this, f, nullptr);
+        f->addClient (r);
+        return r;
+    }
+
+    if (auto reader = AudioFileUtils::createReaderFor (engine, file.getFile()))
+    {
+        backgroundReaderThread.startThread (juce::Thread::Priority::low);
+        auto fallbackReader = createFallbackReader (reader, backgroundReaderThread,
+                                                    48000 * 5);
+        return new Reader (*this, nullptr, std::move (fallbackReader));
+    }
+
+    return {};
+}
+
+AudioFileCache::Reader::Ptr AudioFileCache::createFallbackReader (const std::function<std::unique_ptr<FallbackReader> (juce::TimeSliceThread& timeSliceThread,
+                                                                                                                       int samplesToBuffer)>&
+                                                                  createFallbackReader)
+{
+    backgroundReaderThread.startThread (juce::Thread::Priority::low);
+    auto fallbackReader = createFallbackReader (backgroundReaderThread,
+                                                48000 * 5);
+    return new Reader (*this, nullptr, std::move (fallbackReader));
 }
 
 void AudioFileCache::purgeOrphanReaders()
@@ -754,8 +857,8 @@ void AudioFileCache::purgeOrphanReaders()
 }
 
 //==============================================================================
-AudioFileCache::Reader::Reader (AudioFileCache& c, void* f, juce::BufferingAudioReader* fallback)
-    : cache (c), file (f), fallbackReader (fallback)
+AudioFileCache::Reader::Reader (AudioFileCache& c, void* f, std::unique_ptr<FallbackReader> fallback)
+    : cache (c), file (f), fallbackReader (std::move (fallback))
 {
     jassert (file != nullptr || fallbackReader != nullptr);
 }
@@ -928,6 +1031,7 @@ bool AudioFileCache::Reader::readSamples (int* const* destSamples, int numDestCh
     }
 
     bool allOk = true;
+    const ScopedFileRead sfr (cache);
 
     if (loopLength == 0)
     {

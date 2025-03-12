@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -21,11 +21,12 @@ namespace tracktion {
             //==============================================================================
             static const char* getPluginName() { return NEEDS_TRANS("Phaser"); }
             static const char* xmlTypeName;
+
             // BEATCONNECT MODIFICATION START
             static const char* uniqueId;
             // BEATCONNECT MODIFICATION START
 
-            juce::String getName() override { return TRANS("Phaser"); }
+            juce::String getName() const override { return TRANS("Phaser"); }
             // BEATCONNECT MODIFICATION START
             juce::String getUniqueId() override                     { return uniqueId; }
             // BEATCONNECT MODIFICATION END
@@ -37,7 +38,6 @@ namespace tracktion {
             void applyToBuffer(const PluginRenderContext&) override;
             juce::String getSelectableDescription() override;
             void restorePluginStateFromValueTree(const juce::ValueTree&) override;
-
 
             juce::CachedValue<float> depth, rate, feedbackGain;
 

@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -13,14 +13,6 @@ namespace tracktion { inline namespace engine
 
 namespace
 {
-    template<typename VarType>
-    inline void convertPropertyToType (juce::ValueTree& v, const juce::Identifier& id)
-    {
-        if (const auto* prop = v.getPropertyPointer (id))
-            if (prop->isString())
-                (*const_cast<juce::var*> (prop)) = static_cast<VarType> (*prop);
-    }
-
     void convertMidiPropertiesFromStrings (juce::ValueTree& midi)
     {
         if (midi.hasType (IDs::NOTE))
@@ -1520,6 +1512,7 @@ MidiSysexEvent& MidiList::addSysExEvent (const juce::MidiMessage& message, BeatP
 {
     auto v = MidiSysexEvent::createSysexEvent (message, beat);
     state.addChild (v, -1, um);
+    sysexList->triggerSort();
 
     return *sysexList->getEventFor (v);
 }
@@ -1735,6 +1728,7 @@ bool MidiList::readSeparateTracksFromFile (const juce::File& f,
 
                         std::unique_ptr<MidiList> midiList (new MidiList());
                         midiList->setMidiChannel (midiChannel);
+                        midiList->setImportedFileName (f.getFileName());
                         midiList->importMidiSequence (channelSequence, nullptr, TimePosition(), nullptr);
 
                         if (! midiList->isEmpty())
@@ -1893,7 +1887,7 @@ juce::MidiMessageSequence MidiList::exportToPlaybackMidiSequence (MidiClip& clip
 juce::MidiMessageSequence MidiList::createDefaultPlaybackMidiSequence (const MidiList& list, MidiClip& clip, TimeBase timeBase, bool generateMPE)
 {
     juce::MidiMessageSequence destSequence;
-    
+
     auto& ts = clip.edit.tempoSequence;
     auto midiStartBeat = clip.getContentStartBeat();
     auto channelNumber = list.getMidiChannel().getChannelNumber();
@@ -2005,7 +1999,7 @@ juce::MidiMessageSequence MidiList::createDefaultPlaybackMidiSequence (const Mid
         if (beat >= firstNoteBeat && beat < lastNoteBeat)
             addToSequence (destSequence, clip, timeBase, *e);
     }
-    
+
     return destSequence;
 }
 

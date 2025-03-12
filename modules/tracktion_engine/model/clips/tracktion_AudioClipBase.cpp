@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -109,12 +109,17 @@ public:
             proxyInfo = acb.createProxyRenderingInfo();
     }
 
+    ~ProxyGeneratorJob() override
+    {
+        prepareForJobDeletion();
+    }
+
 private:
     Engine& engine;
     AudioFile original;
     std::unique_ptr<AudioClipBase::ProxyRenderingInfo> proxyInfo;
 
-    bool render()
+    bool render() override
     {
         CRASH_TRACER
 
@@ -192,11 +197,11 @@ private:
 };
 
 //==============================================================================
-AudioClipBase::AudioClipBase (const juce::ValueTree& v, EditItemID id, Type t, ClipTrack& targetTrack)
-    : Clip (v, targetTrack, id, t),
+AudioClipBase::AudioClipBase (const juce::ValueTree& v, EditItemID id, Type t, ClipOwner& targetParent)
+    : Clip (v, targetParent, id, t),
       loopInfo (edit.engine, state.getOrCreateChildWithName (IDs::LOOPINFO, getUndoManager()), getUndoManager()),
-      pluginList (targetTrack.edit),
-      lastProxy (targetTrack.edit.engine)
+      pluginList (edit),
+      lastProxy (edit.engine)
 {
     auto um = getUndoManager();
 
@@ -250,6 +255,8 @@ AudioClipBase::AudioClipBase (const juce::ValueTree& v, EditItemID id, Type t, C
     level->pan = juce::jlimit (-1.0f, 1.0f, static_cast<float> (level->pan.get()));
     checkFadeLengthsForOverrun();
 
+    useClipLaunchQuantisation.referTo (state, IDs::useClipLaunchQuantisation, um);
+
     clipEffectsVisible.referTo (state, IDs::effectsVisible, nullptr);
     updateClipEffectsState();
 
@@ -264,7 +271,7 @@ AudioClipBase::AudioClipBase (const juce::ValueTree& v, EditItemID id, Type t, C
     auto pgen = state.getChildWithName (IDs::PATTERNGENERATOR);
 
     if (pgen.isValid())
-        patternGenerator.reset (new PatternGenerator (*this, pgen));
+        patternGenerator = std::make_unique<PatternGenerator> (*this, pgen);
 }
 
 AudioClipBase::~AudioClipBase()
@@ -292,7 +299,9 @@ void AudioClipBase::initialise()
             setCurrentSourceFile (audioFile.getFile());
     }
 
-    callBlocking ([this] { setLoopDefaults(); });
+    // Exception will be caught by Edit constructor
+    if (! edit.getUndoManager().isPerformingUndoRedo())
+        callBlocking ([this] { setLoopDefaults(); });
 }
 
 void AudioClipBase::cloneFrom (Clip* c)
@@ -373,16 +382,16 @@ PatternGenerator* AudioClipBase::getPatternGenerator()
 }
 
 //==============================================================================
-void AudioClipBase::setTrack (ClipTrack* t)
+void AudioClipBase::setParent (ClipOwner* co)
 {
-    Clip::setTrack (t);
+    Clip::setParent (co);
 
-    pluginList.setTrackAndClip (track != nullptr ? getTrack() : nullptr, this);
+    pluginList.setTrackAndClip (nullptr, this);
 }
 
-bool AudioClipBase::canGoOnTrack (Track& t)
+bool AudioClipBase::canBeAddedTo (ClipOwner& co)
 {
-    return t.canContainAudio();
+    return canContainAudio (co);
 }
 
 void AudioClipBase::changed()
@@ -530,6 +539,8 @@ bool AudioClipBase::setFadeOut (TimeDuration out)
 
 TimeDuration AudioClipBase::getFadeIn() const
 {
+    asyncFunctionCaller.handleUpdateNowIfNeeded();
+
     if (autoCrossfade && getOverlappingClip (ClipDirection::previous) != nullptr)
         return autoFadeIn;
 
@@ -543,6 +554,8 @@ TimeDuration AudioClipBase::getFadeIn() const
 
 TimeDuration AudioClipBase::getFadeOut() const
 {
+    asyncFunctionCaller.handleUpdateNowIfNeeded();
+
     if (autoCrossfade && getOverlappingClip (ClipDirection::next) != nullptr)
         return autoFadeOut;
 
@@ -596,8 +609,7 @@ void AudioClipBase::reverseLoopPoints()
     AudioFileInfo wi = getWaveInfo();
 
     if (isReversed)
-        if (auto sourceItem = sourceFileReference.getSourceProjectItem())
-            wi = AudioFile (edit.engine, sourceItem->getSourceFile()).getInfo();
+        wi = AudioFile (edit.engine, sourceFileReference.getFile()).getInfo();
 
     if (wi.lengthInSamples == 0)
         return;
@@ -644,7 +656,7 @@ void AudioClipBase::reverseLoopPoints()
     {
         // reverse offset
         auto sourceEnd = toPosition (getSourceLength() / ratio);
-        auto newOffset = sourceEnd - (toPosition (getPosition().getLength()) - getPosition().getOffset());
+        auto newOffset = sourceEnd - toPosition (getPosition().getLength()) - getPosition().getOffset();
         setOffset (newOffset);
     }
 
@@ -688,16 +700,16 @@ AudioClipBase* AudioClipBase::getOverlappingClip (ClipDirection direction) const
 {
     CRASH_TRACER
 
-    if (auto ct = getClipTrack())
+    if (auto ct = getParent())
     {
-        auto clips = ct->getClips();
+        const auto& clips = ct->getClips();
         auto ourIndex = clips.indexOf (const_cast<AudioClipBase*> (this));
 
         if (direction == ClipDirection::next)
         {
             for (int i = ourIndex + 1; i < clips.size(); ++i)
                 if (auto c = dynamic_cast<AudioClipBase*> (clips[i]))
-                    if (getPosition().time.contains (c->getPosition().getStart() + TimeDuration::fromSeconds (0.001))
+                    if (getPosition().time.contains (c->getPosition().getStart() + 0.001s)
                          && ! getPosition().time.contains (c->getPosition().getEnd()))
                         return c;
         }
@@ -705,7 +717,7 @@ AudioClipBase* AudioClipBase::getOverlappingClip (ClipDirection direction) const
         {
             for (int i = ourIndex; --i >= 0;)
                 if (auto c = dynamic_cast<AudioClipBase*> (clips[i]))
-                    if (getPosition().time.contains (c->getPosition().getEnd() - TimeDuration::fromSeconds (0.001))
+                    if (getPosition().time.contains (c->getPosition().getEnd() - 0.001s)
                          && ! getPosition().time.contains (c->getPosition().getStart()))
                         return c;
         }
@@ -870,7 +882,7 @@ void AudioClipBase::setNumberOfLoops (int num)
     auto pos = getPosition();
     auto len = std::min (getSourceLength() / speedRatio, pos.getLength());
 
-    if (len <= TimeDuration())
+    if (len <= 0_td)
         return;
 
     if (autoTempo)
@@ -906,7 +918,7 @@ void AudioClipBase::disableLooping()
 
     setLoopRange ({});
     setPosition (pos);
-    
+
     if (getPosition().getLength() > getMaximumLength())
         setLength (getMaximumLength(), true);
 }
@@ -920,6 +932,12 @@ TimeRange AudioClipBase::getLoopRange() const
 
     return { TimePosition::fromSeconds (loopStartBeats.get().inBeats() / bps),
              TimePosition::fromSeconds ((loopStartBeats + loopLengthBeats).inBeats() / bps) };
+}
+
+bool AudioClipBase::canLoop() const
+{
+    return isUsingMelodyne() ? false
+                             : loopInfo.isLoopable();
 }
 
 TimePosition AudioClipBase::getLoopStart() const
@@ -967,32 +985,34 @@ void AudioClipBase::setLoopRange (TimeRange newRange)
     else
     {
         auto sourceLen = getSourceLength();
-        jassert (sourceLen > 0s);
 
-        // limits the number of times longer than the source file length the loop length can be
-        const double maxMultiplesOfSourceLengthForLooping = 50.0;
-
-        auto newStart  = juce::jlimit (0_tp, toPosition (sourceLen) / getSpeedRatio(), newRange.getStart());
-        auto newLength = juce::jlimit (0_td, sourceLen * maxMultiplesOfSourceLengthForLooping / getSpeedRatio(), newRange.getLength());
-
-        if (loopStart != newStart || loopLength != newLength)
+        if (sourceLen > 0s)
         {
-            loopStart = newStart;
-            loopLength = newLength;
+            // limits the number of times longer than the source file length the loop length can be
+            const double maxMultiplesOfSourceLengthForLooping = 50.0;
+
+            auto newStart  = juce::jlimit (0_tp, toPosition (sourceLen) / getSpeedRatio(), newRange.getStart());
+            auto newLength = juce::jlimit (0_td, sourceLen * maxMultiplesOfSourceLengthForLooping / getSpeedRatio(), newRange.getLength());
+
+            if (loopStart != newStart || loopLength != newLength)
+            {
+                loopStart = newStart;
+                loopLength = newLength;
+            }
         }
     }
 }
 
 void AudioClipBase::setLoopRangeBeats (BeatRange newRangeBeats)
 {
-    auto newStartBeat  = juce::jlimit (BeatPosition(), BeatPosition::fromBeats (loopInfo.getNumBeats()), newRangeBeats.getStart());
-    auto newLengthBeat = juce::jlimit (BeatDuration(), BeatDuration::fromBeats (loopInfo.getNumBeats() * 2), newRangeBeats.getLength());
+    auto newStartBeat  = juce::jlimit (0_bp, BeatPosition::fromBeats (loopInfo.getNumBeats()), newRangeBeats.getStart());
+    auto newLengthBeat = juce::jlimit (0_bd, BeatDuration::fromBeats (loopInfo.getNumBeats() * 2), newRangeBeats.getLength());
 
     if (loopStartBeats != newStartBeat || loopLengthBeats != newLengthBeat)
     {
         Clip::setSpeedRatio (1.0);
         setAutoTempo (true);
-        
+
         loopStartBeats  = newStartBeat;
         loopLengthBeats = newLengthBeat;
     }
@@ -1285,6 +1305,7 @@ void AudioClipBase::enableEffects (bool enable, bool warn)
 
     if (enable)
     {
+        setUsesProxy (true);
         if (! v.isValid())
         {
             state.addChild (ClipEffects::create(), -1, um);
@@ -1441,7 +1462,7 @@ void AudioClipBase::snapToOriginalBWavTime()
 //==============================================================================
 juce::Array<Exportable::ReferencedItem> AudioClipBase::getReferencedItems()
 {
-    juce::Array<Exportable::ReferencedItem> results;
+    auto results = Clip::getReferencedItems();
 
     Exportable::ReferencedItem item;
     item.firstTimeUsed = 0;
@@ -1499,7 +1520,7 @@ juce::Array<Exportable::ReferencedItem> AudioClipBase::getReferencedItems()
 void AudioClipBase::reassignReferencedItem (const ReferencedItem& item,
                                             ProjectItemID newItemID, double newStartTime)
 {
-    juce::ignoreUnused (item);
+    Clip::reassignReferencedItem (item, newItemID, newStartTime);
 
     if (getReferencedItems().size() == 1 && item == getReferencedItems().getFirst())
     {
@@ -1521,6 +1542,32 @@ juce::Array<ProjectItemID> AudioClipBase::getTakes() const
     jassert (! hasAnyTakes());
     return {};
 }
+
+//==============================================================================
+std::shared_ptr<LaunchHandle> AudioClipBase::getLaunchHandle()
+{
+    if (! launchHandle)
+        launchHandle = std::make_shared<LaunchHandle>();
+
+    return launchHandle;
+}
+
+LaunchQuantisation* AudioClipBase::getLaunchQuantisation()
+{
+    if (! launchQuantisation)
+        launchQuantisation = std::make_unique<LaunchQuantisation> (state, edit);
+
+    return launchQuantisation.get();
+}
+
+FollowActions* AudioClipBase::getFollowActions()
+{
+    if (! followActions)
+        followActions = std::make_unique<FollowActions> (state.getOrCreateChildWithName (IDs::FOLLOWACTIONS, getUndoManager()), getUndoManager());
+
+    return followActions.get();
+}
+
 
 //==============================================================================
 juce::String AudioClipBase::canAddClipPlugin (const Plugin::Ptr& p) const
@@ -1837,10 +1884,8 @@ void AudioClipBase::setUsesProxy (bool canUseProxy) noexcept
 
 bool AudioClipBase::usesTimeStretchedProxy() const
 {
-   #if TRACKTION_ENABLE_REALTIME_TIMESTRETCHING
     if (! proxyAllowed)
         return false;
-   #endif
 
     return getAutoTempo() || getAutoPitch()
            || getPitchChange() != 0.0f
@@ -1864,7 +1909,7 @@ AudioFile AudioClipBase::getProxyFileToCreate (bool renderTimestretched)
 struct StretchSegment
 {
     static constexpr int maxNumChannels = 8;
-    
+
     StretchSegment (Engine& engine, const AudioFile& file,
                     const AudioClipBase::ProxyRenderingInfo& info,
                     double sampleRate, const AudioSegmentList::Segment& s)
@@ -1953,13 +1998,13 @@ struct StretchSegment
     {
         CRASH_TRACER
         float* outs[maxNumChannels] = {};
-        
+
         for (int i = 0; i < numChannelsToUse; ++i)
             outs[i] = fifo.getWritePointer (i);
 
         const int needed = timestretcher.getFramesNeeded();
         int numRead = 0;
-        
+
         if (needed >= 0)
         {
             AudioScratchBuffer scratch (numChannelsToUse, needed);
@@ -1977,7 +2022,7 @@ struct StretchSegment
             }
 
             const float* ins[maxNumChannels] = {};
-            
+
             for (int i = 0; i < numChannelsToUse; ++i)
                 ins[i] = scratch.buffer.getReadPointer (i);
 
@@ -1991,7 +2036,7 @@ struct StretchSegment
 
         readySamplesStart = 0;
         readySamplesEnd = numRead;
-        
+
         return numRead;
     }
 
@@ -2155,7 +2200,7 @@ HashCode AudioClipBase::getProxyHash()
 
     HashCode hash = getHash()
                      ^ static_cast<HashCode> (timeStretchMode.get())
-                     ^ elastiqueProOptions->toString().hashCode64()
+                     ^ elastiqueProOptions.get().toString().hashCode64()
                      ^ (7342847 * static_cast<HashCode> (pitchChange * 199.0))
                      ^ static_cast<HashCode> (clipPos.getLength().inSeconds() * 10005.0)
                      ^ static_cast<HashCode> (clipPos.getOffset().inSeconds() * 9997.0)
@@ -2181,13 +2226,13 @@ void AudioClipBase::beginRenderingNewProxyIfNeeded()
 {
     if (! canUseProxy())
         return;
-    
+
     if (isTimerRunning())
     {
         startTimer (1);
         return;
     }
-    
+
     const AudioFile playFile (getPlaybackFile());
 
     if (playFile.isNull())
@@ -2221,7 +2266,7 @@ void AudioClipBase::jobFinished (RenderManager::Job& job, bool completedOk)
 //==============================================================================
 void AudioClipBase::createNewProxyAsync()
 {
-    if (canUseProxy())
+    if (canUseProxy() || requiresRenderingSource())
         startTimer (600);
 }
 
@@ -2297,12 +2342,14 @@ void AudioClipBase::valueTreePropertyChanged (juce::ValueTree& tree, const juce:
             || id == IDs::transpose || id == IDs::pitchChange
             || id == IDs::elastiqueMode || id == IDs::autoPitch
             || id == IDs::elastiqueOptions || id == IDs::warpTime
-            || id == IDs::effectsVisible || id == IDs::autoPitchMode)
+            || id == IDs::effectsVisible || id == IDs::autoPitchMode
+            || id == IDs::resamplingQuality
+            || id == IDs::launchQuantisation || id == IDs::useClipLaunchQuantisation)
         {
             if (id == IDs::warpTime)
             {
                 warpTime.forceUpdateOfCachedValue();
-                
+
                 if (! getWarpTime())
                 {
                     if (shouldAttemptRender())
@@ -2311,7 +2358,7 @@ void AudioClipBase::valueTreePropertyChanged (juce::ValueTree& tree, const juce:
                         setCurrentSourceFile (getOriginalFile());
                 }
             }
-            
+
             changed();
         }
         else if (id == IDs::gain)
@@ -2325,8 +2372,9 @@ void AudioClipBase::valueTreePropertyChanged (juce::ValueTree& tree, const juce:
 
             if (id == IDs::mute)
             {
-                if (auto f = track->getParentFolderTrack())
-                    f->setDirtyClips();
+                if (auto track = getTrack())
+                    if (auto f = track->getParentFolderTrack())
+                        f->setDirtyClips();
             }
             else if (id == IDs::autoCrossfade)
             {
@@ -2335,8 +2383,11 @@ void AudioClipBase::valueTreePropertyChanged (juce::ValueTree& tree, const juce:
         }
         else if (id == IDs::autoTempo)
         {
-            autoTempo.forceUpdateOfCachedValue();
-            updateAutoTempoState();
+            if (! getUndoManager()->isPerformingUndoRedo())
+            {
+                autoTempo.forceUpdateOfCachedValue();
+                updateAutoTempoState();
+            }
         }
         else if (id == IDs::isReversed)
         {
@@ -2374,30 +2425,32 @@ void AudioClipBase::valueTreePropertyChanged (juce::ValueTree& tree, const juce:
     }
 }
 
-void AudioClipBase::valueTreeChildAdded (juce::ValueTree& parent, juce::ValueTree& child)
+void AudioClipBase::valueTreeChildAdded (juce::ValueTree& parentState, juce::ValueTree& child)
 {
-    if (parent == state)
+    if (parentState == state)
     {
         if (child.hasType (IDs::PLUGIN))
             Selectable::changed();
         else if (child.hasType (IDs::EFFECTS))
             updateClipEffectsState();
         else if (child.hasType (IDs::PATTERNGENERATOR))
-            patternGenerator.reset (new PatternGenerator (*this, child));
+            patternGenerator = std::make_unique<PatternGenerator> (*this, child);
+        else if (child.hasType (IDs::LOOPINFO) && isInitialised)
+            loopInfo.state = child;
     }
-    else if (parent.hasType (IDs::LOOPINFO) || child.hasType (IDs::WARPMARKER))
+    else if (parentState.hasType (IDs::LOOPINFO) || child.hasType (IDs::WARPMARKER))
     {
         changed();
     }
     else
     {
-        Clip::valueTreeChildAdded (parent, child);
+        Clip::valueTreeChildAdded (parentState, child);
     }
 }
 
-void AudioClipBase::valueTreeChildRemoved (juce::ValueTree& parent, juce::ValueTree& child, int oldIndex)
+void AudioClipBase::valueTreeChildRemoved (juce::ValueTree& parentState, juce::ValueTree& child, int oldIndex)
 {
-    if (parent == state)
+    if (parentState == state)
     {
         if (child.hasType (IDs::PLUGIN))
             Selectable::changed();
@@ -2405,20 +2458,22 @@ void AudioClipBase::valueTreeChildRemoved (juce::ValueTree& parent, juce::ValueT
             updateClipEffectsState();
         else if (child.hasType (IDs::PATTERNGENERATOR))
             patternGenerator = nullptr;
+        else if (child.hasType (IDs::LOOPINFO) && isInitialised)
+            copyValueTree (loopInfo.state, LoopInfo (edit.engine).state, nullptr); // Resets to default
     }
-    else if (parent.hasType (IDs::LOOPINFO) || child.hasType (IDs::WARPMARKER))
+    else if (parentState.hasType (IDs::LOOPINFO) || child.hasType (IDs::WARPMARKER))
     {
         changed();
     }
     else
     {
-        Clip::valueTreeChildRemoved (parent, child, oldIndex);
+        Clip::valueTreeChildRemoved (parentState, child, oldIndex);
     }
 }
 
-void AudioClipBase::valueTreeChildOrderChanged (juce::ValueTree& parent, int oldIndex, int newIndex)
+void AudioClipBase::valueTreeChildOrderChanged (juce::ValueTree& parentState, int oldIndex, int newIndex)
 {
-    Clip::valueTreeChildOrderChanged (parent, oldIndex, newIndex);
+    Clip::valueTreeChildOrderChanged (parentState, oldIndex, newIndex);
 }
 
 void AudioClipBase::valueTreeParentChanged (juce::ValueTree& child)

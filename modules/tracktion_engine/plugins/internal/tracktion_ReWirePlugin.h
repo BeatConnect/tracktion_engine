@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -78,8 +78,9 @@ public:
     // BEATCONNECT MODIFICATION END
 
     void initialiseFully() override;
-    juce::String getName() override;
-    juce::String getPluginType() override;
+
+    juce::String getName() const override;
+    juce::String getPluginType() override                                         { return xmlTypeName; }
     // BEATCONNECT MODIFICATION START
     juce::String getUniqueId() override { return uniqueId; }
     // BEATCONNECT MODIFICATION END{ return xmlTypeName; }

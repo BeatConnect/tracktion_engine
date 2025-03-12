@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -11,7 +11,7 @@
 namespace tracktion { inline namespace engine
 {
 
-/** A test plugin that introduces latency to the incomming signal.
+/** A test plugin that introduces latency to the incoming signal.
     This isn't added to the PluginManager by default as its main use is for
     internal testing.
 */
@@ -24,11 +24,13 @@ public:
     //==============================================================================
     static const char* getPluginName()                      { return NEEDS_TRANS("Latency Tester"); }
     static const char* xmlTypeName;
+
     // BEATCONNECT MODIFICATION START
     static const char* uniqueId;
     // BEATCONNECT MODIFICATION END
+    static juce::ValueTree create();
 
-    juce::String getName() override                         { return getPluginName(); }
+    juce::String getName() const override                   { return getPluginName(); }
     juce::String getPluginType() override                   { return xmlTypeName; }
     juce::String getSelectableDescription() override        { return getName(); }
     // BEATCONNECT MODIFICATION START
@@ -40,7 +42,6 @@ public:
     void applyToBuffer (const PluginRenderContext&) override;
 
     double getLatencySeconds() override                     { return latencyTimeSeconds.get(); }
-    bool needsConstantBufferSize() override                 { return false; }
 
     void restorePluginStateFromValueTree (const juce::ValueTree&) override;
 

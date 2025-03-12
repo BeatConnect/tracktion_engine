@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -20,6 +20,7 @@
 
   // If you get a build error here you'll need to add the Elastique SDK to your header search path!
   #include "elastique_pro/incl/elastiqueProV3API.h"
+  #include "elastique_pro/incl/elastiqueProV3DirectAPI.h"
 
  #ifdef __GNUC__
   #pragma GCC diagnostic pop
@@ -42,6 +43,7 @@
  #pragma clang diagnostic ignored "-Wextra-semi"
  #pragma clang diagnostic ignored "-Wextra-semi"
  #pragma clang diagnostic ignored "-Wmissing-prototypes"
+ #pragma clang diagnostic ignored "-Wfloat-equal"
 #endif
 
 #ifdef __GNUC__
@@ -56,6 +58,7 @@
  #pragma GCC diagnostic ignored "-Wunused-parameter"
  #pragma GCC diagnostic ignored "-Wpedantic"
  #pragma GCC diagnostic ignored "-Wunknown-pragmas"
+ #pragma GCC diagnostic ignored "-Wfloat-equal"
 #endif
 
 #ifdef JUCE_MSVC
@@ -63,8 +66,11 @@
  #pragma warning (disable: 4005 4189 4189 4267 4702 4458 4100)
 #endif
 
+#include <tracktion_core/tracktion_TestConfig.h>
+
 #include "timestretch/tracktion_TimeStretch.cpp"
 #include "timestretch/tracktion_TimeStretch.test.cpp"
+#include "timestretch/tracktion_ReadAheadTimeStretcher.cpp"
 
 namespace tracktion { inline namespace engine
 {

@@ -1,6 +1,6 @@
 /*
     ,--.                     ,--.     ,--.  ,--.
-  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2018
+  ,-'  '-.,--.--.,--,--.,---.|  |,-.,-'  '-.`--' ,---. ,--,--,      Copyright 2024
   '-.  .-'|  .--' ,-.  | .--'|     /'-.  .-',--.| .-. ||      \   Tracktion Software
     |  |  |  |  \ '-'  \ `--.|  \  \  |  |  |  |' '-' '|  ||  |       Corporation
     `---' `--'   `--`--'`---'`--'`--' `---' `--' `---' `--''--'    www.tracktion.com
@@ -46,6 +46,7 @@ struct RackType::RackPluginList  : public ValueTreeObjectList<RackType::PluginIn
         : ValueTreeObjectList<PluginInfo> (parentTree), type (t)
     {
         CRASH_TRACER
+        // Exception will be caught by the Edit constructor
         callBlocking ([this] { this->rebuildObjects(); });
     }
 
@@ -74,15 +75,24 @@ struct RackType::RackPluginList  : public ValueTreeObjectList<RackType::PluginIn
         delete p;
     }
 
-    void newObjectAdded (PluginInfo*) override                                          { sendChange(); }
-    void objectRemoved (PluginInfo*) override                                           { sendChange(); }
-    void objectOrderChanged() override                                                  { sendChange(); }
-    void valueTreePropertyChanged (juce::ValueTree&, const juce::Identifier&) override  { sendChange(); }
-
-    void sendChange()
+    void valueTreeChildAdded (juce::ValueTree& p, juce::ValueTree& tree) override
     {
-        // XXX
+        ValueTreeObjectList<RackType::PluginInfo>::valueTreeChildAdded (p, tree);
+
+        if (tree.hasType (IDs::PLUGIN) && p.hasType (IDs::PLUGININSTANCE))
+            for (auto info : objects)
+                if (info->plugin == nullptr && info->state == p)
+                    info->plugin = type.edit.getPluginCache().getOrCreatePluginFor (tree);
     }
+
+    void objectRemoved (PluginInfo*) override
+    {
+        removeBrokenConnections (type.state, type.getUndoManager());
+    }
+
+    void newObjectAdded (PluginInfo*) override {}
+    void objectOrderChanged() override {}
+    void valueTreePropertyChanged (juce::ValueTree&, const juce::Identifier&) override {}
 
     RackType& type;
 
@@ -118,20 +128,17 @@ struct RackType::ConnectionList  : public ValueTreeObjectList<RackConnection>
 
     void deleteObject (RackConnection* t) override
     {
-        TRACKTION_ASSERT_MESSAGE_THREAD
+        if (! type.edit.isLoading())
+            TRACKTION_ASSERT_MESSAGE_THREAD
+
         jassert (t != nullptr);
         delete t;
     }
 
-    void newObjectAdded (RackConnection*) override                                      { sendChange(); }
-    void objectRemoved (RackConnection*) override                                       { sendChange(); }
-    void objectOrderChanged() override                                                  { sendChange(); }
-    void valueTreePropertyChanged (juce::ValueTree&, const juce::Identifier&) override  { sendChange(); }
-
-    void sendChange()
-    {
-        // XXX
-    }
+    void newObjectAdded (RackConnection*) override {}
+    void objectRemoved (RackConnection*) override {}
+    void objectOrderChanged() override {}
+    void valueTreePropertyChanged (juce::ValueTree&, const juce::Identifier&) override {}
 
     RackType& type;
 
@@ -145,6 +152,7 @@ struct RackType::WindowStateList  : public ValueTreeObjectList<WindowState>
         : ValueTreeObjectList<WindowState> (t.state), type (t)
     {
         CRASH_TRACER
+        // Exception will be caught by the Edit constructor
         callBlocking ([this] { this->rebuildObjects(); });
     }
 
@@ -181,10 +189,10 @@ struct RackType::WindowStateList  : public ValueTreeObjectList<WindowState>
 };
 
 //==============================================================================
-RackType::RackType (const juce::ValueTree& v, Edit& owner)
-    : MacroParameterElement (owner, v),
-      edit (owner), state (v),
-      rackID (EditItemID::fromID (state))
+RackType::RackType (Edit& ed, const juce::ValueTree& v)
+    : EditItem (ed, v),
+      MacroParameterElement (ed, v),
+      state (v)
 {
     CRASH_TRACER
 
@@ -208,8 +216,8 @@ RackType::RackType (const juce::ValueTree& v, Edit& owner)
     if (rackName.get().isEmpty())
         rackName = TRANS("New Rack");
 
-    pluginList.reset (new RackPluginList (*this, state));
-    connectionList.reset (new ConnectionList (*this, state));
+    pluginList = std::make_unique<RackPluginList> (*this, state);
+    connectionList = std::make_unique<ConnectionList> (*this, state);
 
     if (getOutputNames().isEmpty())
         addDefaultOutputs();
@@ -294,7 +302,7 @@ juce::Result RackType::restoreStateFromValueTree (const juce::ValueTree& vt)
     if (! v.hasType (IDs::RACK))
         return juce::Result::fail (TRANS("Invalid or corrupted preset"));
 
-    rackID.writeID (v, nullptr);
+    itemID.writeID (v, nullptr);
 
     {
         auto um = getUndoManager();
@@ -367,15 +375,18 @@ void RackType::saveWindowPosition()
 {
     for (auto* ws : getWindowStates())
     {
-        auto windowState = ws->lastWindowBounds.toString();
-        ws->state.setProperty (IDs::windowPos, windowState.isEmpty() ? juce::var() : juce::var (windowState), nullptr);
-        ws->state.setProperty (IDs::windowLocked, ws->windowLocked, nullptr);
+        if (ws->lastWindowBounds)
+        {
+            auto windowState = ws->lastWindowBounds->toString();
+            ws->state.setProperty (IDs::windowPos, windowState.isEmpty() ? juce::var() : juce::var (windowState), nullptr);
+            ws->state.setProperty (IDs::windowLocked, ws->windowLocked, nullptr);
+        }
     }
 }
 
-RackType::Ptr RackType::createTypeToWrapPlugins (const Plugin::Array& plugins, Edit& ownerEdit)
+RackType::Ptr RackType::createTypeToWrapPlugins (const Plugin::Array& plugins, Edit& sourceEdit)
 {
-    auto rack = ownerEdit.getRackList().addNewRack();
+    auto rack = sourceEdit.getRackList().addNewRack();
 
     if (plugins.size() == 1)
         rack->rackName = plugins.getFirst()->getName() + " " + TRANS("Wrapper");
@@ -554,6 +565,12 @@ void RackType::setPluginPosition (int index, juce::Point<float> pos)
         info->state.setProperty (IDs::x, juce::jlimit (0.0f, 1.0f, pos.x), getUndoManager());
         info->state.setProperty (IDs::y, juce::jlimit (0.0f, 1.0f, pos.y), getUndoManager());
     }
+}
+
+void RackType::flushStateToValueTree()
+{
+    for (auto& plugin : getPlugins())
+        plugin->flushPluginStateToValueTree();
 }
 
 //==============================================================================
@@ -801,6 +818,9 @@ static bool connectionIsValid (juce::ValueTree& rack, EditItemID srcID,
 
 void RackType::removeBrokenConnections (juce::ValueTree& rack, juce::UndoManager* um)
 {
+    if (um && um->isPerformingUndoRedo())
+        return;
+
     for (int i = rack.getNumChildren(); --i >= 0;)
     {
         auto c = rack.getChild (i);
@@ -1208,7 +1228,7 @@ struct RackTypeList::ValueTreeList  : public ValueTreeObjectList<RackType>
 
     RackType* createNewObject (const juce::ValueTree& v) override
     {
-        auto t = new RackType (v, list.edit);
+        auto t = new RackType (list.edit, v);
         t->incReferenceCount();
         return t;
     }
@@ -1246,7 +1266,7 @@ void RackTypeList::initialise (const juce::ValueTree& v)
     state = v;
     jassert (state.hasType (IDs::RACKS));
 
-    list.reset (new ValueTreeList (*this, v));
+    list = std::make_unique<ValueTreeList> (*this, v);
     list->rebuildObjects();
 }
 
@@ -1276,7 +1296,7 @@ RackType::Ptr RackTypeList::getRackType (int index) const
 RackType::Ptr RackTypeList::getRackTypeForID (EditItemID rackID) const
 {
     for (auto r : list->objects)
-        if (r->rackID == rackID)
+        if (r->itemID == rackID)
             return *r;
 
     return {};
@@ -1296,16 +1316,17 @@ void RackTypeList::removeRackType (const RackType::Ptr& type)
     if (list->objects.contains (type.get()))
     {
         auto allTracks = getAllTracks (edit);
-        
+
         for (auto f : getAllPlugins (edit, false))
             if (auto rf = dynamic_cast<RackInstance*> (f))
                 if (rf->type == type)
                     rf->deleteFromParent();
 
         // Remove any Macros or Modifiers that might be assigned
-        type->macroParameterList.hideMacroParametersFromTracks();
+        if (auto mpl = type->getMacroParameterList())
+            mpl->hideMacroParametersFromTracks();
 
-        for (auto macro : type->macroParameterList.getMacroParameters())
+        for (auto macro : type->getMacroParameters())
             for (auto param : getAllParametersBeingModifiedBy (edit, *macro))
                 param->removeModifier (*macro);
 
@@ -1313,7 +1334,7 @@ void RackTypeList::removeRackType (const RackType::Ptr& type)
         {
             for (auto t : allTracks)
                 t->hideAutomatableParametersForSource (modifier->itemID);
-            
+
             for (auto param : getAllParametersBeingModifiedBy (edit, *modifier))
                 param->removeModifier (*modifier);
         }
@@ -1338,9 +1359,13 @@ RackType::Ptr RackTypeList::addNewRack()
     newID.writeID (v, nullptr);
     state.addChild (v, -1, &edit.getUndoManager());
 
-    auto p = getRackTypeForID (newID);
-    jassert (p != nullptr);
-    return p;
+    auto type = getRackTypeForID (newID);
+    jassert (type != nullptr);
+
+    if (edit.engine.getEngineBehaviour().arePluginsRemappedWhenTempoChanges())
+        type->getMacroParameterListForWriting().remapOnTempoChange = true;
+
+    return type;
 }
 
 RackType::Ptr RackTypeList::addRackTypeFrom (const juce::ValueTree& rackType)
@@ -1363,10 +1388,29 @@ RackType::Ptr RackTypeList::addRackTypeFrom (const juce::ValueTree& rackType)
 
             type = getRackTypeForID (typeID);
             jassert (type != nullptr);
+
+            if (edit.engine.getEngineBehaviour().arePluginsRemappedWhenTempoChanges())
+                type->getMacroParameterListForWriting().remapOnTempoChange = true;
         }
     }
 
     return type;
+}
+
+RackType::Ptr RackTypeList::duplicateRack (RackType& rackType)
+{
+    rackType.flushStateToValueTree();
+    auto newState = rackType.state.createCopy();
+    EditItemID::remapIDs (newState, nullptr, edit);
+    return addRackTypeFrom (newState);
+}
+
+RackType::Ptr RackTypeList::duplicateRack (EditItemID rackID)
+{
+    if (auto source = getRackTypeForID (rackID))
+        return duplicateRack (*source);
+
+    return {};
 }
 
 void RackTypeList::importRackFiles (const juce::Array<juce::File>& files)
@@ -1390,7 +1434,7 @@ void RackType::triggerUpdate()
         return;
 
     countInstancesInEdit();
-    
+
     edit.restartPlayback();
 }
 
