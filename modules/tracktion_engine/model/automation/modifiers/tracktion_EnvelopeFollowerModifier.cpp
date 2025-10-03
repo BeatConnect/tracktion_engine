@@ -268,6 +268,14 @@ EnvelopeFollowerModifier::EnvelopeFollowerModifier (Edit& e, const juce::ValueTr
     lowPassFrequencyParam   = addParam          ("lowPassFrequency",    TRANS("Low-pass Frequency"),    freqRange, 700.0f,                  lowPassFrequency,   "Hz");
     highPassFrequencyParam  = addParam          ("highPassFrequency",   TRANS("High-pass Frequency"),   freqRange, 700.0f,                  highPassFrequency,  "Hz");
 
+    // BEATCONNECT MODIFICATION START: threshold + inverse params (constructor)
+    threshold.referTo(state, juce::Identifier("threshold"), um, 0.0f);        // 0..1 after-ADSR gate
+    inverseEnabled.referTo(state, juce::Identifier("inverseEnabled"), um, false);
+
+    thresholdParam = addParam("threshold", TRANS("Threshold"), { 0.0f, 1.0f, 0.0001f }, 0.2f, threshold, {});
+    inverseEnabledParam = addDiscreteParam("inverseEnabled", TRANS("Inverse"), { 0.0f, 1.0f }, inverseEnabled, modifier::getEnabledNames());
+    // BEATCONNECT MODIFICATION END
+
     changedTimer.setCallback ([this]
                               {
                                   changedTimer.stopTimer();
@@ -293,7 +301,17 @@ EnvelopeFollowerModifier::~EnvelopeFollowerModifier()
 //==============================================================================
 float EnvelopeFollowerModifier::getCurrentValue()
 {
-    return (getEnvelopeValue() * depthParam->getCurrentValue()) + offsetParam->getCurrentValue();
+    // BEATCONNECT MODIFICATION START: post-ADSR threshold + optional inverse
+    const float env = getEnvelopeValue();                           // already includes attack/hold/release
+    const float thr = juce::jlimit(0.0f, 0.9999f, thresholdParam ? thresholdParam->getCurrentValue() : 0.0f);
+
+    // Normalize only the portion above threshold so 0->thr maps to 0, thr->1 maps to 0->1
+    float gated = env <= thr ? 0.0f : (env - thr) / (1.0f - thr);
+
+    if (inverseEnabledParam && getBoolParamValue(*inverseEnabledParam)) gated = 1.0f - gated;
+
+    return (gated * depthParam->getCurrentValue()) + offsetParam->getCurrentValue();
+    // BEATCONNECT MODIFICATION END
 }
 
 AutomatableParameter::ModifierAssignment* EnvelopeFollowerModifier::createAssignment (const juce::ValueTree& v)

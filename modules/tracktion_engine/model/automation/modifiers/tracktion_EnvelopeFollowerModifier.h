@@ -61,6 +61,11 @@ public:
     AutomatableParameter::Ptr gainDbParam, attackParam, holdParam, releaseParam, depthParam, offsetParam,
         lowPassEnabledParam, highPassEnabledParam, lowPassFrequencyParam, highPassFrequencyParam;
 
+    // BEATCONNECT MODIFICATION START: threshold + inverse params (members)
+    juce::CachedValue<float> threshold, inverseEnabled;
+    AutomatableParameter::Ptr thresholdParam, inverseEnabledParam;
+    // BEATCONNECT MODIFICATION END
+
 private:
     class EnvelopeFollower;
 
