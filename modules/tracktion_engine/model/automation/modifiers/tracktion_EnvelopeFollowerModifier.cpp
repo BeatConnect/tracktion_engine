@@ -349,6 +349,11 @@ void EnvelopeFollowerModifier::applyToBuffer (const PluginRenderContext& pc)
                            pc.bufferStartSample,
                            pc.bufferNumSamples);
     processBlock (ab);
+
+    // BEATCONNECT MODIFICATION START
+    // Envelope follower is incorrectly wired to pass audio to output for some reason, Dave notified..
+    ab.clear();
+    // BEATCONNECT MODIFICATION END
 }
 
 //==============================================================================
